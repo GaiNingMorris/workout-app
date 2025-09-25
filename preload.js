@@ -1,0 +1,1 @@
+window.os={platform:process.platform};

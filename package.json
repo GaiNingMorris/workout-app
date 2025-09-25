@@ -1,0 +1,13 @@
+{
+  "name": "neurolink-desktop",
+  "version": "1.2.1",
+  "private": true,
+  "description": "Desktop workout app with checklist UI, exercise pictures, goals, unlocks, auto-deload.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^31.2.0"
+  }
+}
