@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="Workout App - Muscle building workout app for age 50+ with TRX and dumbbell exercises">
+    <meta name="author" content="Workout App">
+
+    <title>Workout Desktop - Muscle Building Workouts</title>
+
+    <!-- Preload critical resources -->
+    <link rel="preload" href="src/styles/main.css" as="style">
+    <link rel="preload" href="src/renderer.js" as="script">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="src/styles/main.css">
+
+    <!-- Prevent FOUC (Flash of Unstyled Content) -->
+    <style>
+
+    </style>
+</head>
+
+<body>
+    <!-- Loading indicator -->
+    <div id="loading" class="loading">
+        <div>Loading Workout App...</div>
+    </div>
+
+    <!-- Main app container -->
+    <div id="app" aria-label="Workout Application">
+        <!-- App content will be rendered here -->
+    </div>
+
+    <!-- Scripts (ES module) -->
+    <script type="module" src="src/renderer.js"></script>
+</body>
+
+</html>

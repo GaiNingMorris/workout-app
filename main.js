@@ -42,7 +42,7 @@ function createWindow() {
   // Show window when ready to prevent visual flash
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
-    
+
     // Focus the window on creation
     if (isDev) {
       mainWindow.webContents.openDevTools();
@@ -64,7 +64,7 @@ function createWindow() {
   // Security: Prevent navigation to external URLs
   mainWindow.webContents.on('will-navigate', (event, navigationUrl) => {
     const parsedUrl = new URL(navigationUrl);
-    
+
     // Allow file:// protocol for local files
     if (parsedUrl.protocol !== 'file:') {
       event.preventDefault();
@@ -80,7 +80,7 @@ function createWindow() {
       message: 'NeuroLink has crashed. Would you like to restart?',
       buttons: ['Restart', 'Close']
     };
-    
+
     dialog.showMessageBox(options).then((response) => {
       if (response.response === 0) {
         app.relaunch();
@@ -196,7 +196,7 @@ function createMenu() {
               defaultId: 0,
               cancelId: 0
             };
-            
+
             dialog.showMessageBox(mainWindow, options).then((response) => {
               if (response.response === 1) {
                 mainWindow.webContents.send('reset-data');
@@ -298,9 +298,10 @@ app.whenReady().then(() => {
 // Quit when all windows are closed
 app.on('window-all-closed', () => {
   // macOS: Keep app running even when all windows are closed
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
+  // if (process.platform !== 'darwin') {
+  //   app.quit();
+  // }
+  app.quit();
 });
 
 // Security: Prevent protocol handler hijacking
