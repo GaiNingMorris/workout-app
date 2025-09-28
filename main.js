@@ -77,7 +77,7 @@ function createWindow() {
     const options = {
       type: 'error',
       title: 'Application Crashed',
-      message: 'NeuroLink has crashed. Would you like to restart?',
+      message: 'Workout app has crashed. Would you like to restart?',
       buttons: ['Restart', 'Close']
     };
 
@@ -217,12 +217,12 @@ function createMenu() {
       label: 'Help',
       submenu: [
         {
-          label: 'About NeuroLink',
+          label: 'About Workout App',
           click: () => {
             dialog.showMessageBox(mainWindow, {
               type: 'info',
-              title: 'About NeuroLink Desktop',
-              message: 'NeuroLink Desktop v1.3.0',
+              title: 'About Workout App',
+              message: 'Workout App v1.3.0',
               detail: 'Muscle building workout app designed for age 50+ with progressive overload, TRX exercises, and dumbbell training.\n\nBuilt with Electron and vanilla JavaScript.',
               buttons: ['OK']
             });
@@ -234,7 +234,7 @@ function createMenu() {
             dialog.showMessageBox(mainWindow, {
               type: 'info',
               title: 'Keyboard Shortcuts',
-              message: 'NeuroLink Keyboard Shortcuts',
+              message: 'Workout App Keyboard Shortcuts',
               detail: 'Ctrl/Cmd + T: Today\'s Workout\nCtrl/Cmd + S: Schedule\nCtrl/Cmd + G: Goals & Progress\nCtrl/Cmd + E: Export Data\nCtrl/Cmd + I: Import Data\nF11: Toggle Fullscreen\nF12: Toggle DevTools',
               buttons: ['OK']
             });
@@ -244,7 +244,7 @@ function createMenu() {
         {
           label: 'Report Issue',
           click: () => {
-            shell.openExternal('https://github.com/your-username/neurolink-desktop/issues');
+            shell.openExternal('https://github.com/GaiNingMorris/workout-app/issues');
           }
         }
       ]

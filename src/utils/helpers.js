@@ -1,4 +1,4 @@
-// Shared helpers for NeuroLink app (ES module)
+// Shared helpers for Workout app (ES module)
 export function pad2(n) { return (n < 10 ? "0" : "") + n; }
 export function fmtClock(total) { var m = Math.floor(total / 60), s = total % 60; return pad2(m) + ":" + pad2(s); }
 export function round05(n) { return Math.round(n * 2) / 2; }
@@ -38,7 +38,7 @@ export const IMG_MAP = {
     "Hip Flexor Stretch": "hip_flexor_stretch"
 };
 export function getImgKey(name) { return IMG_MAP[name] || "stretch"; }
-export function setDemoImageFor(demoEl, ex) { try { var key = getImgKey(ex.name); if (demoEl && demoEl.style) demoEl.style.backgroundImage = "url('./assets/exercises/" + key + ".jpg')"; } catch (e) { console.error('setDemoImageFor error', e); } }
+export function setDemoImageFor(demoEl, ex) { try { var key = getImgKey(ex.name); if (demoEl && demoEl.style) demoEl.style.backgroundImage = "url('../assets/exercises/" + key + ".jpg')"; } catch (e) { console.error('setDemoImageFor error', e); } }
 
 // Simple storage helpers
 const KEY = 'nl_working';
