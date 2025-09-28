@@ -1,0 +1,36 @@
+Folder PATH listing for volume OS
+Volume serial number is 321C-8251
+C:.
+¦   .gitignore
+¦   main.js
+¦   package.json
+¦   preload.js
+¦   README.md
+¦   tree.txt
+¦   
++---app
+    ¦   app.js
+    ¦   art.txt
+    ¦   index.html
+    ¦   README_IMAGES.md
+    ¦   style.css
+    ¦   
+    +---assets
+        ¦   trainer.svg
+        ¦   
+        +---exercises
+                bar_hang.jpg
+                calf_stretch.jpg
+                chin_assist.jpg
+                db_curl.jpg
+                db_press.jpg
+                db_rdl.jpg
+                db_row.jpg
+                db_shoulder.jpg
+                hamstring_stretch.jpg
+                hip_flexor_stretch.jpg
+                plank.jpg
+                pushup.jpg
+                stretch.jpg
+                trx_squat.jpg
+                
