@@ -43,8 +43,10 @@ export function setDemoImageFor(demoEl, ex) {
     console.log('setDemoImageFor', demoEl, ex);
     try {
         var key = getImgKey(ex.name);
+        // The app's index.html lives at the project root, and assets are under src/assets/
+        // Use the path relative to index.html so the URL resolves correctly in the renderer.
         if (demoEl && demoEl.style)
-            demoEl.style.backgroundImage = "url('../assets/exercises/" + key + ".jpg')";
+            demoEl.style.backgroundImage = "url('src/assets/exercises/" + key + ".jpg')";
     } catch (e) {
         console.error('setDemoImageFor error', e);
     }

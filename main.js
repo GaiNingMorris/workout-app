@@ -95,14 +95,26 @@ function createWindow() {
 }
 
 function getAppIcon() {
-  // Return appropriate icon based on platform
-  if (process.platform === 'win32') {
-    return path.join(__dirname, 'src/assets/exercises', 'icon.ico');
-  } else if (process.platform === 'darwin') {
-    return path.join(__dirname, 'src/assets/exercises', 'icon.icns');
-  } else {
-    return path.join(__dirname, 'src/assets/exercises', 'icon.png');
+  // Return an existing icon file if available, otherwise fall back to trainer.svg
+  // Prefer platform-specific formats (.ico for Windows, .icns for macOS),
+  // then PNG, then the bundled trainer.svg.
+  try {
+    const assetsDir = path.join(__dirname, 'src', 'assets');
+    const exDir = path.join(assetsDir, 'exercises');
+    const winCandidates = [path.join(exDir, 'icon.ico'), path.join(exDir, 'icon.png'), path.join(assetsDir, 'trainer.svg')];
+    const darwinCandidates = [path.join(exDir, 'icon.icns'), path.join(exDir, 'icon.png'), path.join(assetsDir, 'trainer.svg')];
+    const otherCandidates = [path.join(exDir, 'icon.png'), path.join(assetsDir, 'trainer.svg')];
+
+    const candidates = process.platform === 'win32' ? winCandidates : process.platform === 'darwin' ? darwinCandidates : otherCandidates;
+    for (const p of candidates) {
+      if (fs.existsSync(p)) return p;
+    }
+  } catch (e) {
+    // ignore and fall through to default
   }
+
+  // Default fallback (relative to project root)
+  return path.join(__dirname, 'src', 'assets', 'trainer.svg');
 }
 
 function createMenu() {
