@@ -9,14 +9,14 @@ import { renderSettings } from './pages/settings.js';
 const App = {
     state: { tab: 'today' },
     data: null,
-    init: function () {
-        var d = loadData();
-        if (!d) { d = defaultData(); saveData(d); }
+    init: async function () {
+        var d = await loadData();
+        if (!d) { d = defaultData(); await saveData(d); }
         ensureGroupConfig(d);
         this.data = d;
         this.render();
     },
-    save: function () { saveData(this.data); },
+    save: async function () { await saveData(this.data); },
     setTab: function (t) { this.state.tab = t; this.render(); },
     lastWorkoutDate: function () { var L = this.data.logs; return L.length ? new Date(L[L.length - 1].date) : null; },
     daysSinceLast: function () { var last = this.lastWorkoutDate(); if (!last) return 999; var diff = (Date.now() - last.getTime()) / (1000 * 60 * 60 * 24); return Math.floor(diff); },
@@ -54,7 +54,7 @@ const App = {
     }
 };
 
-window.addEventListener('DOMContentLoaded', function () { try { App.init(); var loading = document.getElementById('loading'); var app = document.getElementById('app'); if (loading) loading.style.display = 'none'; if (app) app.classList.add('loaded'); } catch (err) { var root = document.getElementById('app'); if (root) root.innerHTML = '<div class="card"><h2>Load Error</h2><p>' + String(err) + '</p></div>'; console.error(err); } });
+window.addEventListener('DOMContentLoaded', async function () { try { await App.init(); var loading = document.getElementById('loading'); var app = document.getElementById('app'); if (loading) loading.style.display = 'none'; if (app) app.classList.add('loaded'); } catch (err) { var root = document.getElementById('app'); if (root) root.innerHTML = '<div class="card"><h2>Load Error</h2><p>' + String(err) + '</p></div>'; console.error(err); } });
 
 window.addEventListener('error', function (e) { var root = document.getElementById('app'); if (root) root.innerHTML = '<div class="card"><h2>Runtime Error</h2><p>' + String(e.message || e) + '</p></div>'; });
 

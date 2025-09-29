@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, shell, dialog } = require('electron');
+const { app, BrowserWindow, Menu, shell, dialog, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
@@ -23,7 +23,7 @@ function createWindow() {
       nodeIntegration: false, // Security: Disable node integration
       contextIsolation: true, // Security: Enable context isolation
       enableRemoteModule: false, // Security: Disable remote module
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname, 'src', 'preload.js'),
       // Security: Restrict what the renderer can access
       allowRunningInsecureContent: false,
       experimentalFeatures: false
@@ -93,6 +93,74 @@ function createWindow() {
 
   return mainWindow;
 }
+
+// Persistent storage handlers (JSON file in userData)
+// Persistent storage handlers - prefer project root (workout-app/workout-data.json)
+// For compatibility, if a file exists in the old userData location, copy it to the project root on first load.
+function storageFilePath() {
+  return path.join(__dirname, 'workout-data.json');
+}
+
+function legacyStorageFilePath() {
+  return path.join(app.getPath('userData'), 'workout-data.json');
+}
+
+ipcMain.handle('workout-storage-load', async () => {
+  const p = storageFilePath();
+  const legacy = legacyStorageFilePath();
+  try {
+    // If project file exists, use it
+    if (fs.existsSync(p)) {
+      const raw = await fs.promises.readFile(p, 'utf8');
+      return JSON.parse(raw || 'null');
+    }
+
+    // Otherwise, if a legacy userData file exists, copy it into project root and return it
+    if (fs.existsSync(legacy)) {
+      try {
+        const raw = await fs.promises.readFile(legacy, 'utf8');
+        // ensure project directory is writable
+        await fs.promises.writeFile(p, raw, 'utf8');
+        return JSON.parse(raw || 'null');
+      } catch (inner) {
+        console.error('failed to migrate legacy storage', inner);
+      }
+    }
+
+    // No file found
+    return null;
+  } catch (e) {
+    console.error('storage load error', e);
+    return null;
+  }
+});
+
+ipcMain.handle('workout-storage-save', async (event, data) => {
+  const p = storageFilePath();
+  try {
+    // project root is a file path; ensure directory exists (should already)
+    await fs.promises.mkdir(path.dirname(p), { recursive: true });
+    await fs.promises.writeFile(p, JSON.stringify(data, null, 2), 'utf8');
+    return { ok: true };
+  } catch (e) {
+    console.error('storage save error', e);
+    return { ok: false, error: String(e) };
+  }
+});
+
+ipcMain.handle('workout-storage-reset', async () => {
+  const p = storageFilePath();
+  const legacy = legacyStorageFilePath();
+  try {
+    if (fs.existsSync(p)) await fs.promises.unlink(p);
+    // also try removing legacy file if present
+    if (fs.existsSync(legacy)) await fs.promises.unlink(legacy);
+    return { ok: true };
+  } catch (e) {
+    console.error('storage reset error', e);
+    return { ok: false, error: String(e) };
+  }
+});
 
 function getAppIcon() {
   // Return an existing icon file if available, otherwise fall back to trainer.svg

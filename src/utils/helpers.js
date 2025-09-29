@@ -54,11 +54,36 @@ export function setDemoImageFor(demoEl, ex) {
 
 // Simple storage helpers
 const KEY = 'nl_working';
-export function loadData() {
-    try { var raw = localStorage.getItem(KEY); return raw ? JSON.parse(raw) : null; } catch (e) { console.error('loadData', e); return null; }
+export async function loadData() {
+    try {
+        if (typeof window !== 'undefined' && window.workoutStorage && typeof window.workoutStorage.load === 'function') {
+            const d = await window.workoutStorage.load();
+            return d || null;
+        }
+        console.error('Persistent storage API (workoutStorage) is not available. This application requires Electron with the preload exposing workoutStorage.');
+        return null;
+    } catch (e) { console.error('loadData', e); return null; }
 }
-export function saveData(d) { try { localStorage.setItem(KEY, JSON.stringify(d)); } catch (e) { console.error('saveData', e); } }
-export function resetData() { localStorage.removeItem(KEY); }
+
+export async function saveData(d) {
+    try {
+        if (typeof window !== 'undefined' && window.workoutStorage && typeof window.workoutStorage.save === 'function') {
+            return await window.workoutStorage.save(d);
+        }
+        console.error('Persistent storage API (workoutStorage) is not available. Cannot save data.');
+        return { ok: false, error: 'workoutStorage missing' };
+    } catch (e) { console.error('saveData', e); return { ok: false, error: String(e) }; }
+}
+
+export async function resetData() {
+    try {
+        if (typeof window !== 'undefined' && window.workoutStorage && typeof window.workoutStorage.reset === 'function') {
+            return await window.workoutStorage.reset();
+        }
+        console.error('Persistent storage API (workoutStorage) is not available. Cannot reset data.');
+        return { ok: false, error: 'workoutStorage missing' };
+    } catch (e) { console.error('resetData', e); return { ok: false, error: String(e) }; }
+}
 
 export function defaultData() {
     return {

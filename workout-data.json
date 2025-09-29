@@ -1,0 +1,137 @@
+{
+  "goals": {
+    "targetWeight": 165,
+    "hangBestSec": 0,
+    "toeTouchCm": null
+  },
+  "settings": {
+    "restGood": 120,
+    "restEasy": 90
+  },
+  "loads": {
+    "Bench-Supported Dumbbell Press": 15,
+    "Seated Dumbbell Row": 15,
+    "Seated Dumbbell Shoulder Press": 12,
+    "Dumbbell Curl": 12
+  },
+  "groupConfig": {
+    "upperA": {
+      "Bench-Supported Dumbbell Press": {
+        "enabled": true
+      },
+      "Seated Dumbbell Row": {
+        "enabled": true
+      },
+      "Push-Up": {
+        "enabled": true
+      },
+      "Plank": {
+        "enabled": true
+      },
+      "Bar Hang": {
+        "enabled": true
+      },
+      "Hamstring Stretch": {
+        "enabled": true
+      },
+      "Calf Stretch": {
+        "enabled": true
+      },
+      "Hip Flexor Stretch": {
+        "enabled": true
+      },
+      "TRX Assisted Squat": {
+        "enabled": true
+      }
+    },
+    "lowerB": {
+      "TRX Assisted Squat": {
+        "enabled": true
+      },
+      "DB RDL (hip hinge)": {
+        "enabled": true
+      },
+      "Plank": {
+        "enabled": true
+      },
+      "Hamstring Stretch": {
+        "enabled": true
+      },
+      "Calf Stretch": {
+        "enabled": true
+      },
+      "Hip Flexor Stretch": {
+        "enabled": true
+      }
+    },
+    "upperC": {
+      "Seated Dumbbell Shoulder Press": {
+        "enabled": true
+      },
+      "Dumbbell Curl": {
+        "enabled": true
+      },
+      "Push-Up": {
+        "enabled": true
+      },
+      "Plank": {
+        "enabled": true
+      },
+      "Bar Hang": {
+        "enabled": true
+      },
+      "Hamstring Stretch": {
+        "enabled": true
+      },
+      "Calf Stretch": {
+        "enabled": true
+      },
+      "Hip Flexor Stretch": {
+        "enabled": true
+      }
+    },
+    "easy": {},
+    "stretch": {
+      "Hamstring Stretch": {
+        "enabled": true
+      },
+      "Calf Stretch": {
+        "enabled": true
+      },
+      "Hip Flexor Stretch": {
+        "enabled": true
+      }
+    }
+  },
+  "streaks": {
+    "fails": {}
+  },
+  "logs": [
+    {
+      "date": "2025-09-29T02:58:22.163Z",
+      "mode": "recovery",
+      "items": [
+        {
+          "ex": "Hamstring Stretch",
+          "reps": 0,
+          "targetReps": 0,
+          "weight": 0,
+          "fail": false
+        },
+        {
+          "ex": "Calf Stretch",
+          "reps": 0,
+          "targetReps": 0,
+          "weight": 0,
+          "fail": false
+        }
+      ]
+    }
+  ],
+  "weights": [
+    {
+      "date": "2025-09-29",
+      "weight": 262
+    }
+  ]
+}
