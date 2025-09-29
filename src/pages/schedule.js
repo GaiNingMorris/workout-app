@@ -1,56 +1,122 @@
-import { el, addDays, dayName, planUpperA, planLowerB, planUpperC, planRecovery } from '../utils/helpers.js';
+import { el, addDays, dayName, planMonday, planTuesday, planThursday, planFriday, planRecovery, planRest, getSettings, weeksUntilDeload } from '../utils/helpers.js';
 
 export function renderSchedule(App) {
     var self = App;
     var root = el('div', {}, []);
-    root.appendChild(el('div', { class: 'brand' }, [el('div', { class: 'dot' }, []), el('h2', {}, ['Schedule']), el('span', { class: 'sub' }, ['Your muscle-building weekly plan'])]));
+    
+    (async function() {
+        const settings = await getSettings();
+        const weeksLeft = weeksUntilDeload(settings.programStartDate);
+        const isCurrentlyDeload = weeksLeft === 0;
+        
+        var subtitle = 'Your 4-day muscle-building split';
+        if (isCurrentlyDeload) {
+            subtitle = '⚠️ DELOAD WEEK - Reduced volume for recovery';
+        } else if (weeksLeft <= 2) {
+            subtitle = 'Deload week in ' + weeksLeft + ' week' + (weeksLeft === 1 ? '' : 's');
+        }
+        
+        root.appendChild(el('div', { class: 'brand' }, [
+            el('div', { class: 'dot' }, []), 
+            el('h2', {}, ['Schedule']), 
+            el('span', { class: 'sub' }, [subtitle])
+        ]));
 
-    function plannedModeFor(dateObj) {
-        var dow = dateObj.getDay();
-        if (dow === 0) return { mode: 'rest', variant: null };
-        if (dow === 6) return { mode: 'stretch', variant: null };
-        if (dow === 2 || dow === 4) return { mode: 'recovery', variant: null };
-        if (dow === 1) return { mode: 'upperA', variant: 'A' };
-        if (dow === 3) return { mode: 'lowerB', variant: 'B' };
-        if (dow === 5) return { mode: 'upperC', variant: 'C' };
-        return { mode: 'recovery', variant: null };
-    }
+        function plannedModeFor(dateObj) {
+            var dow = dateObj.getDay();
+            if (dow === 1) return { mode: 'monday', variant: 'Upper Push' };
+            if (dow === 2) return { mode: 'tuesday', variant: 'Lower Quad' };
+            if (dow === 3) return { mode: 'recovery', variant: 'Recovery' };
+            if (dow === 4) return { mode: 'thursday', variant: 'Upper Pull' };
+            if (dow === 5) return { mode: 'friday', variant: 'Lower Posterior' };
+            if (dow === 6) return { mode: 'recovery', variant: 'Recovery' };
+            if (dow === 0) return { mode: 'rest', variant: 'Rest' };
+            return { mode: 'rest', variant: 'Rest' };
+        }
 
-    function planFor(mode, variant) {
-        if (mode === 'upperA') return planUpperA(self.data);
-        if (mode === 'lowerB') return planLowerB(self.data);
-        if (mode === 'upperC') return planUpperC(self.data);
-        if (mode === 'recovery' || mode === 'stretch') return planRecovery();
-        if (mode === 'easy') return planRecovery();
-        return [];
-    }
+        async function planFor(mode) {
+            if (mode === 'monday') return await planMonday();
+            if (mode === 'tuesday') return await planTuesday();
+            if (mode === 'thursday') return await planThursday();
+            if (mode === 'friday') return await planFriday();
+            if (mode === 'recovery') return await planRecovery();
+            if (mode === 'rest') return await planRest();
+            return { warmups: [], main: [] };
+        }
 
-    var daysWrap = el('div', { class: 'list' }, []);
-    var today = new Date();
-    for (var i = 0; i < 7; i++) {
-        (function (i) {
-            var d = addDays(today, i);
-            var pm = plannedModeFor(d);
-            var label = dayName(d) + ' • ' + (d.getMonth() + 1) + '/' + d.getDate();
-            var subtitle = pm.mode === 'upperA' ? 'Push & Pull - Chest & Back Focus' : pm.mode === 'lowerB' ? 'Power Legs - Squats & Deadlifts' : pm.mode === 'upperC' ? 'Arms & Core - Shoulders & Biceps' : pm.mode === 'easy' ? 'Easy (recovery mode)' : pm.mode === 'recovery' ? 'Recovery / Mobility' : pm.mode === 'stretch' ? 'Stretch-only' : 'Full Rest';
+        var daysWrap = el('div', { class: 'list' }, []);
+        var today = new Date();
+        
+        for (var i = 0; i < 7; i++) {
+            await (async function(i) {
+                var d = addDays(today, i);
+                var pm = plannedModeFor(d);
+                var label = dayName(d) + ' • ' + (d.getMonth() + 1) + '/' + d.getDate();
+                
+                var subtitle = '';
+                if (pm.mode === 'monday') subtitle = 'Upper Push - Chest, Shoulders, Triceps';
+                else if (pm.mode === 'tuesday') subtitle = 'Lower Quad - Squats & Glutes';
+                else if (pm.mode === 'thursday') subtitle = 'Upper Pull - Back & Biceps';
+                else if (pm.mode === 'friday') subtitle = 'Lower Posterior - Hamstrings & Glutes';
+                else if (pm.mode === 'recovery') subtitle = 'Recovery - Static Stretching Only';
+                else if (pm.mode === 'rest') subtitle = 'Full Rest Day';
 
-            var plan = planFor(pm.mode, pm.variant);
-            var previewList = el('div', { class: 'note' }, []);
-            if (plan.length) {
-                for (var j = 0; j < plan.length; j++) {
-                    var p = plan[j];
-                    var note = p.name;
-                    if (p.targetText) note += ' — ' + p.targetText;
-                    previewList.appendChild(el('div', {}, ['• ' + note]));
+                var plan = await planFor(pm.mode);
+                var allExercises = (plan.warmups || []).concat(plan.main || []);
+                
+                var previewList = el('div', { class: 'note' }, []);
+                
+                if (pm.mode === 'rest') {
+                    previewList.appendChild(el('div', {}, ['• Complete rest - no workout, no stretching']));
+                    previewList.appendChild(el('div', {}, ['• Focus on recovery, hydration, and sleep']));
+                } else if (allExercises.length > 0) {
+                    // Show warmups
+                    if (plan.warmups && plan.warmups.length > 0) {
+                        previewList.appendChild(el('div', { style: 'font-weight: 600; margin-top: 8px' }, ['Warm-Up:']));
+                        plan.warmups.forEach(function(ex) {
+                            previewList.appendChild(el('div', {}, ['• ' + ex.name]));
+                        });
+                    }
+                    
+                    // Show main workout
+                    if (plan.main && plan.main.length > 0) {
+                        previewList.appendChild(el('div', { style: 'font-weight: 600; margin-top: 8px' }, ['Main Workout:']));
+                        plan.main.forEach(function(ex) {
+                            var note = ex.name;
+                            if (ex.targetText) note += ' — ' + ex.targetText;
+                            previewList.appendChild(el('div', {}, ['• ' + note]));
+                        });
+                    }
+                } else {
+                    previewList.appendChild(el('div', {}, ['• Rest']));
                 }
-            } else { previewList.appendChild(el('div', {}, ['• Rest'])); }
 
-            var card = el('div', { class: 'item' }, [el('div', { class: 'title' }, [el('span', { class: 'badge' }, [dayName(d)]), ' ' + label]), el('div', { class: 'meta' }, [subtitle]), previewList]);
-            daysWrap.appendChild(card);
-        })(i);
-    }
+                var badgeClass = i === 0 ? 'badge' : 'badge';
+                var card = el('div', { class: 'item' }, [
+                    el('div', { class: 'title' }, [
+                        el('span', { class: badgeClass }, [dayName(d)]), 
+                        ' ' + label
+                    ]), 
+                    el('div', { class: 'meta' }, [subtitle]), 
+                    previewList
+                ]);
+                
+                daysWrap.appendChild(card);
+            })(i);
+        }
 
-    root.appendChild(el('div', { class: 'card' }, [el('div', { class: 'note' }, ['Muscle-building rhythm: Mon = Push & Pull • Wed = Power Legs • Fri = Arms & Core • Tue/Thu = Recovery • Sat = Stretch • Sun = Rest']), el('div', { class: 'hr' }, []), daysWrap, el('div', { class: 'hr' }, []), el('div', { class: 'note' }, ['Each muscle group trained 2x per week for optimal growth. Rest 2-3 minutes between sets.'])]));
+        root.appendChild(el('div', { class: 'card' }, [
+            el('div', { class: 'note' }, [
+                '4-Day Split: Mon = Upper Push • Tue = Lower Quad • Wed = Recovery • Thu = Upper Pull • Fri = Lower Posterior • Sat = Recovery • Sun = Rest'
+            ]),
+            el('div', { class: 'hr' }, []), 
+            daysWrap, 
+            el('div', { class: 'hr' }, []), 
+            el('div', { class: 'note' }, [
+                'Each muscle group trained 2x per week for optimal growth. Rest 2-3 minutes between sets for strength training.'
+            ])
+        ]));
+    })();
 
     return root;
 }

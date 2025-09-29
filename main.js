@@ -1,12 +1,36 @@
 const { app, BrowserWindow, Menu, shell, dialog, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const Datastore = require('nedb');
 
 // Security: Disable Node.js integration in renderer process
 const isDev = process.env.NODE_ENV === 'development';
 
 // Keep a global reference of the window object
 let mainWindow;
+
+// NeDB databases
+let databases = {};
+
+function initDatabases() {
+  const dbPath = path.join(__dirname, 'workout-data');
+  
+  // Ensure workout-data directory exists
+  if (!fs.existsSync(dbPath)) {
+    fs.mkdirSync(dbPath, { recursive: true });
+  }
+
+  databases = {
+    exercises: new Datastore({ filename: path.join(dbPath, 'exercises.db'), autoload: true }),
+    workouts: new Datastore({ filename: path.join(dbPath, 'workouts.db'), autoload: true }),
+    loads: new Datastore({ filename: path.join(dbPath, 'loads.db'), autoload: true }),
+    progressions: new Datastore({ filename: path.join(dbPath, 'progressions.db'), autoload: true }),
+    user: new Datastore({ filename: path.join(dbPath, 'user.db'), autoload: true }),
+    settings: new Datastore({ filename: path.join(dbPath, 'settings.db'), autoload: true })
+  };
+
+  console.log('NeDB databases initialized');
+}
 
 function createWindow() {
   // Create the browser window
@@ -94,78 +118,214 @@ function createWindow() {
   return mainWindow;
 }
 
-// Persistent storage handlers (JSON file in userData)
-// Persistent storage handlers - prefer project root (workout-app/workout-data.json)
-// For compatibility, if a file exists in the old userData location, copy it to the project root on first load.
-function storageFilePath() {
-  return path.join(__dirname, 'workout-data.json');
-}
+// NeDB IPC Handlers
 
-function legacyStorageFilePath() {
-  return path.join(app.getPath('userData'), 'workout-data.json');
-}
+// Generic query handler
+ipcMain.handle('db-find', async (event, collection, query, options) => {
+  return new Promise((resolve, reject) => {
+    const db = databases[collection];
+    if (!db) {
+      reject(new Error(`Collection ${collection} not found`));
+      return;
+    }
+    
+    let cursor = db.find(query || {});
+    if (options?.sort) cursor = cursor.sort(options.sort);
+    if (options?.limit) cursor = cursor.limit(options.limit);
+    if (options?.skip) cursor = cursor.skip(options.skip);
+    
+    cursor.exec((err, docs) => {
+      if (err) reject(err);
+      else resolve(docs);
+    });
+  });
+});
 
-ipcMain.handle('workout-storage-load', async () => {
-  const p = storageFilePath();
-  const legacy = legacyStorageFilePath();
+// Find one document
+ipcMain.handle('db-findOne', async (event, collection, query) => {
+  return new Promise((resolve, reject) => {
+    const db = databases[collection];
+    if (!db) {
+      reject(new Error(`Collection ${collection} not found`));
+      return;
+    }
+    db.findOne(query || {}, (err, doc) => {
+      if (err) reject(err);
+      else resolve(doc);
+    });
+  });
+});
+
+// Insert document(s)
+ipcMain.handle('db-insert', async (event, collection, doc) => {
+  return new Promise((resolve, reject) => {
+    const db = databases[collection];
+    if (!db) {
+      reject(new Error(`Collection ${collection} not found`));
+      return;
+    }
+    db.insert(doc, (err, newDoc) => {
+      if (err) reject(err);
+      else resolve(newDoc);
+    });
+  });
+});
+
+// Update document(s)
+ipcMain.handle('db-update', async (event, collection, query, update, options) => {
+  return new Promise((resolve, reject) => {
+    const db = databases[collection];
+    if (!db) {
+      reject(new Error(`Collection ${collection} not found`));
+      return;
+    }
+    db.update(query, update, options || {}, (err, numAffected) => {
+      if (err) reject(err);
+      else resolve(numAffected);
+    });
+  });
+});
+
+// Remove document(s)
+ipcMain.handle('db-remove', async (event, collection, query, options) => {
+  return new Promise((resolve, reject) => {
+    const db = databases[collection];
+    if (!db) {
+      reject(new Error(`Collection ${collection} not found`));
+      return;
+    }
+    db.remove(query, options || {}, (err, numRemoved) => {
+      if (err) reject(err);
+      else resolve(numRemoved);
+    });
+  });
+});
+
+// Count documents
+ipcMain.handle('db-count', async (event, collection, query) => {
+  return new Promise((resolve, reject) => {
+    const db = databases[collection];
+    if (!db) {
+      reject(new Error(`Collection ${collection} not found`));
+      return;
+    }
+    db.count(query || {}, (err, count) => {
+      if (err) reject(err);
+      else resolve(count);
+    });
+  });
+});
+
+// Legacy JSON migration handler
+ipcMain.handle('migrate-from-json', async () => {
   try {
-    // If project file exists, use it
-    if (fs.existsSync(p)) {
-      const raw = await fs.promises.readFile(p, 'utf8');
-      return JSON.parse(raw || 'null');
+    const jsonPath = path.join(__dirname, 'workout-data.json');
+    
+    // Check if old JSON file exists
+    if (!fs.existsSync(jsonPath)) {
+      return { success: true, message: 'No migration needed - JSON file not found' };
     }
 
-    // Otherwise, if a legacy userData file exists, copy it into project root and return it
-    if (fs.existsSync(legacy)) {
-      try {
-        const raw = await fs.promises.readFile(legacy, 'utf8');
-        // ensure project directory is writable
-        await fs.promises.writeFile(p, raw, 'utf8');
-        return JSON.parse(raw || 'null');
-      } catch (inner) {
-        console.error('failed to migrate legacy storage', inner);
+    // Read old data
+    const oldData = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+    
+    // Check if already migrated (user collection should be empty if fresh)
+    const userCount = await new Promise((resolve) => {
+      databases.user.count({}, (err, count) => resolve(count || 0));
+    });
+    
+    if (userCount > 0) {
+      return { success: true, message: 'Already migrated' };
+    }
+
+    console.log('Starting migration from JSON to NeDB...');
+
+    // Migrate user profile
+    await new Promise((resolve, reject) => {
+      databases.user.insert({
+        _id: 'user_profile',
+        startDate: oldData.logs && oldData.logs[0] ? oldData.logs[0].date : new Date().toISOString(),
+        currentWeight: oldData.weights && oldData.weights.length > 0 ? 
+          oldData.weights[oldData.weights.length - 1].weight : 262,
+        targetWeight: oldData.goals?.targetWeight || 165,
+        height: 71,
+        age: 52,
+        bodyweightHistory: oldData.weights || [],
+        bestHangTime: oldData.goals?.hangBestSec || 0,
+        unlocksAchieved: []
+      }, (err) => err ? reject(err) : resolve());
+    });
+
+    // Migrate settings
+    await new Promise((resolve, reject) => {
+      databases.settings.insert({
+        _id: 'app_settings',
+        restTimerStrength: oldData.settings?.restGood || 120,
+        restTimerEasy: oldData.settings?.restEasy || 90,
+        enableMicroloading: true,
+        audioAlerts: false,
+        darkMode: true,
+        programStartDate: oldData.logs && oldData.logs[0] ? oldData.logs[0].date : new Date().toISOString(),
+        lastDeloadDate: null,
+        deloadInterval: 8
+      }, (err) => err ? reject(err) : resolve());
+    });
+
+    // Migrate loads
+    if (oldData.loads) {
+      for (const [exerciseName, weight] of Object.entries(oldData.loads)) {
+        await new Promise((resolve, reject) => {
+          databases.loads.insert({
+            exerciseId: exerciseName,
+            currentWeight: weight,
+            lastIncreaseDate: new Date().toISOString(),
+            failStreak: oldData.streaks?.fails?.[exerciseName] || 0,
+            history: []
+          }, (err) => err ? reject(err) : resolve());
+        });
       }
     }
 
-    // No file found
-    return null;
-  } catch (e) {
-    console.error('storage load error', e);
-    return null;
-  }
-});
+    // Migrate workout logs
+    if (oldData.logs) {
+      for (const log of oldData.logs) {
+        await new Promise((resolve, reject) => {
+          databases.workouts.insert({
+            date: log.date,
+            template: log.mode,
+            isDeloadWeek: false,
+            exercises: log.items.map(item => ({
+              exerciseId: item.ex,
+              completedSets: [{
+                reps: item.reps,
+                weight: item.weight,
+                struggled: item.fail || false,
+                timestamp: log.date
+              }]
+            })),
+            startTime: log.date,
+            endTime: log.date,
+            notes: ''
+          }, (err) => err ? reject(err) : resolve());
+        });
+      }
+    }
 
-ipcMain.handle('workout-storage-save', async (event, data) => {
-  const p = storageFilePath();
-  try {
-    // project root is a file path; ensure directory exists (should already)
-    await fs.promises.mkdir(path.dirname(p), { recursive: true });
-    await fs.promises.writeFile(p, JSON.stringify(data, null, 2), 'utf8');
-    return { ok: true };
-  } catch (e) {
-    console.error('storage save error', e);
-    return { ok: false, error: String(e) };
-  }
-});
+    // Backup old JSON
+    const backupPath = path.join(__dirname, 'workout-data.json.backup');
+    fs.renameSync(jsonPath, backupPath);
 
-ipcMain.handle('workout-storage-reset', async () => {
-  const p = storageFilePath();
-  const legacy = legacyStorageFilePath();
-  try {
-    if (fs.existsSync(p)) await fs.promises.unlink(p);
-    // also try removing legacy file if present
-    if (fs.existsSync(legacy)) await fs.promises.unlink(legacy);
-    return { ok: true };
-  } catch (e) {
-    console.error('storage reset error', e);
-    return { ok: false, error: String(e) };
+    console.log('Migration complete!');
+    return { success: true, message: 'Migration successful' };
+
+  } catch (error) {
+    console.error('Migration error:', error);
+    return { success: false, error: error.message };
   }
 });
 
 function getAppIcon() {
   // Return an existing icon file if available, otherwise fall back to trainer.svg
-  // Prefer platform-specific formats (.ico for Windows, .icns for macOS),
-  // then PNG, then the bundled trainer.svg.
   try {
     const assetsDir = path.join(__dirname, 'src', 'assets');
     const exDir = path.join(assetsDir, 'exercises');
@@ -181,7 +341,6 @@ function getAppIcon() {
     // ignore and fall through to default
   }
 
-  // Default fallback (relative to project root)
   return path.join(__dirname, 'src', 'assets', 'trainer.svg');
 }
 
@@ -302,8 +461,8 @@ function createMenu() {
             dialog.showMessageBox(mainWindow, {
               type: 'info',
               title: 'About Workout App',
-              message: 'Workout App v1.3.0',
-              detail: 'Muscle building workout app designed for age 50+ with progressive overload, TRX exercises, and dumbbell training.\n\nBuilt with Electron and vanilla JavaScript.',
+              message: 'Workout App v2.0.0',
+              detail: 'Muscle building workout app designed for age 50+ with 4-day split, progressive overload, TRX exercises, and dumbbell training.\n\nBuilt with Electron and vanilla JavaScript.',
               buttons: ['OK']
             });
           }
@@ -364,6 +523,7 @@ function createMenu() {
 
 // App event handlers
 app.whenReady().then(() => {
+  initDatabases();
   createWindow();
   createMenu();
 
@@ -377,10 +537,6 @@ app.whenReady().then(() => {
 
 // Quit when all windows are closed
 app.on('window-all-closed', () => {
-  // macOS: Keep app running even when all windows are closed
-  // if (process.platform !== 'darwin') {
-  //   app.quit();
-  // }
   app.quit();
 });
 

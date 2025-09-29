@@ -1,13 +1,16 @@
 {
   "name": "workout-app",
-  "version": "1.2.1",
+  "version": "2.0.0",
   "private": true,
-  "description": "Desktop workout app with checklist UI, exercise pictures, goals, unlocks, auto-deload.",
+  "description": "Desktop workout app with 4-day split, progressive overload, NeDB storage",
   "main": "main.js",
   "scripts": {
     "start": "electron ."
   },
   "devDependencies": {
     "electron": "^31.2.0"
+  },
+  "dependencies": {
+    "nedb": "^1.8.0"
   }
 }

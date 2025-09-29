@@ -1,103 +1,356 @@
-import { el, fmtClock, setDemoImageFor, suggestLoadFor, planUpperA, planLowerB, planUpperC, planRecovery, latestWeight } from '../utils/helpers.js';
+import { el, fmtClock, setDemoImageFor, planForToday, workoutTypeForDate, getLoadFor, processWorkoutCompletion } from '../utils/helpers.js';
 
 export function renderToday(App) {
     console.log('Rendering Today page');
 
     var self = App;
-    var plan = (function () {
-        var today = new Date();
-        var workoutType = (function (d) { var dow = d.getDay(); if (dow === 1) return 'upperA'; if (dow === 3) return 'lowerB'; if (dow === 5) return 'upperC'; return null; })(today);
-        if (workoutType === 'upperA') return { mode: 'upperA', variant: 'A', steps: planUpperA(self.data) };
-        if (workoutType === 'lowerB') return { mode: 'lowerB', variant: 'B', steps: planLowerB(self.data) };
-        if (workoutType === 'upperC') return { mode: 'upperC', variant: 'C', steps: planUpperC(self.data) };
-        return { mode: 'recovery', variant: null, steps: planRecovery() };
+    var root = el('div', {}, []);
+    
+    // Create async wrapper since we need to await planForToday
+    (async function() {
+        const workoutType = workoutTypeForDate(new Date());
+        
+        // Handle rest day
+        if (workoutType === 'rest') {
+            root.appendChild(el('div', { class: 'brand' }, [
+                el('div', { class: 'dot' }, []), 
+                el('h2', {}, ['Today']), 
+                el('span', { class: 'sub' }, ['Sunday - Full Rest Day'])
+            ]));
+            
+            root.appendChild(el('div', { class: 'card' }, [
+                el('h3', {}, ['Rest Day']),
+                el('div', { class: 'note' }, ['Today is your complete rest day. No workout, no stretching. Let your muscles recover and grow stronger.']),
+                el('div', { class: 'hr' }, []),
+                el('div', {}, ['💪 Your next workout is Monday - Upper Push (Chest, Shoulders, Triceps)']),
+                el('div', { class: 'note' }, ['Rest is when muscle growth happens. Eat well, stay hydrated, and get good sleep.'])
+            ]));
+            
+            return;
+        }
+        
+        // Get today's plan
+        const plan = await planForToday();
+        const warmups = plan.warmups || [];
+        const main = plan.main || [];
+        const isDeload = plan.isDeload || false;
+        
+        // Determine subtitle
+        var subtitle = '';
+        if (workoutType === 'monday') subtitle = 'Upper Push - Chest, Shoulders, Triceps';
+        else if (workoutType === 'tuesday') subtitle = 'Lower Quad - Squats & Glutes';
+        else if (workoutType === 'thursday') subtitle = 'Upper Pull - Back & Biceps';
+        else if (workoutType === 'friday') subtitle = 'Lower Posterior - Hamstrings & Glutes';
+        else if (workoutType === 'recovery') subtitle = 'Recovery Day - Static Stretching';
+        
+        if (isDeload) subtitle = 'DELOAD WEEK - ' + subtitle;
+        
+        var header = el('div', { class: 'brand' }, [
+            el('div', { class: 'dot' }, []), 
+            el('h2', {}, ['Today']), 
+            el('span', { class: 'sub' }, [subtitle])
+        ]);
+        
+        // Demo image area
+        var demo = el('div', { class: 'pic' }, []);
+        function setDemo(ex) { setDemoImageFor(demo, ex); }
+        
+        // Set initial demo image
+        if (warmups.length > 0) setDemo(warmups[0]);
+        else if (main.length > 0) setDemo(main[0]);
+        
+        // Rest timer
+        var timerBadge = el('div', { class: 'badge' }, ['Ready']);
+        var restTimer = null, restRemain = 0;
+        
+        function startRest(s) {
+            if (restTimer) clearInterval(restTimer);
+            restRemain = s; 
+            timerBadge.textContent = fmtClock(restRemain);
+            restTimer = setInterval(function () { 
+                restRemain -= 1; 
+                if (restRemain <= 0) { 
+                    clearInterval(restTimer); 
+                    restTimer = null; 
+                    timerBadge.textContent = 'Ready'; 
+                } else { 
+                    timerBadge.textContent = fmtClock(restRemain); 
+                } 
+            }, 1000);
+        }
+        
+        // Session tracking
+        var session = { 
+            date: new Date().toISOString(), 
+            template: workoutType, 
+            isDeloadWeek: isDeload,
+            exercises: [] 
+        };
+        
+        // Determine rest time
+        var restSecs = (workoutType === 'monday' || workoutType === 'thursday' || workoutType === 'tuesday' || workoutType === 'friday') 
+            ? (self.settings?.restTimerStrength || 120) 
+            : (self.settings?.restTimerEasy || 90);
+        
+        // Build warm-up section
+        var warmupList = el('div', { class: 'list' }, []);
+        if (warmups.length > 0) {
+            warmups.forEach(function(ex) {
+                var title = el('div', { class: 'title' }, [
+                    el('span', { class: 'badge' }, ['Warm']), 
+                    ' ' + ex.name
+                ]);
+                var meta = el('div', { class: 'meta' }, [ex.detail || ex.targetText || '']);
+                var doneBtn = el('button', { class: 'btn small' }, ['Done']);
+                
+                doneBtn.addEventListener('click', function() {
+                    doneBtn.disabled = true;
+                    doneBtn.textContent = '✓ Done';
+                });
+                
+                var row = el('div', { 
+                    class: 'item', 
+                    onclick: function() { setDemo(ex); } 
+                }, [title, meta, doneBtn]);
+                
+                warmupList.appendChild(row);
+            });
+        }
+        
+        // Build main workout section
+        var mainList = el('div', { class: 'list' }, []);
+        
+        main.forEach(function(ex) {
+            // Get current load for strength exercises
+            (async function() {
+                if (ex.type === 'upper') {
+                    const load = await getLoadFor(ex.name);
+                    ex.currentLoad = load.currentWeight;
+                }
+            })();
+            
+            var title = el('div', { class: 'title' }, [
+                el('span', { class: 'badge' }, [
+                    ex.type === 'upper' ? 'Str' : 
+                    ex.type === 'lower' ? 'Leg' : 
+                    ex.type === 'bodyweight' ? 'BW' :
+                    ex.type === 'stretch' ? 'Mob' : 'Ex'
+                ]), 
+                ' ' + ex.name + ' ', 
+                el('span', { class: 'badge' }, [ex.targetText || ''])
+            ]);
+            
+            var metaText = ex.detail || '';
+            if (ex.type === 'upper' && ex.targetReps > 0) {
+                metaText = 'Target load: ' + (ex.currentLoad || 15) + ' lb per DB. ' + metaText;
+            }
+            var meta = el('div', { class: 'meta' }, [metaText]);
+            
+            var progress = el('div', { class: 'note' }, ['Progress: 0/' + ex.sets + ' sets']);
+            
+            // Tracking inputs
+            var struggled = el('input', { type: 'checkbox' }, []);
+            var repsInput = el('input', { 
+                type: 'number', 
+                min: '0', 
+                style: 'width:60px', 
+                placeholder: ex.targetReps.toString() 
+            });
+            var lbl = el('label', { class: 'note' }, ['Actual reps:']);
+            var doneBtn = el('button', { class: 'btn small' }, ['Mark done']);
+            
+            // Initialize completed sets tracking
+            if (!ex.completedSets) ex.completedSets = [];
+            
+            doneBtn.addEventListener('click', function() {
+                setDemo(ex);
+                var actualReps = parseInt(repsInput.value) || ex.targetReps;
+                var isStruggled = struggled.checked;
+                
+                // Record this set
+                ex.completedSets.push({
+                    reps: actualReps,
+                    weight: ex.currentLoad || 0,
+                    struggled: isStruggled,
+                    timestamp: new Date().toISOString()
+                });
+                
+                ex.curDone = (ex.curDone || 0) + 1;
+                progress.textContent = 'Progress: ' + ex.curDone + '/' + ex.sets + ' sets';
+                
+                // Reset inputs
+                struggled.checked = false; 
+                repsInput.value = '';
+                
+                // Start rest timer
+                if (ex.type !== 'stretch') {
+                    startRest(restSecs);
+                }
+                
+                if (ex.curDone >= ex.sets) {
+                    doneBtn.disabled = true;
+                    doneBtn.textContent = '✓ Complete';
+                }
+            });
+            
+            var controlRow = el('div', { class: 'row' }, [
+                lbl, repsInput, 
+                el('label', { class: 'note' }, ['Struggled?']), 
+                struggled, 
+                doneBtn
+            ]);
+            
+            // For stretches, simpler interface
+            if (ex.type === 'stretch') {
+                controlRow = el('div', { class: 'row' }, [doneBtn]);
+                doneBtn.textContent = 'Complete';
+                doneBtn.addEventListener('click', function() {
+                    ex.completedSets = [{ reps: 0, weight: 0, struggled: false, timestamp: new Date().toISOString() }];
+                    ex.curDone = 1;
+                    doneBtn.disabled = true;
+                    doneBtn.textContent = '✓ Done';
+                }, true);
+            }
+            
+            var row = el('div', { 
+                class: 'item', 
+                onclick: function() { setDemo(ex); } 
+            }, [title, meta, controlRow, progress]);
+            
+            mainList.appendChild(row);
+            
+            // Store reference for finish button
+            if (!session.exercises) session.exercises = [];
+            session.exercises.push(ex);
+        });
+        
+        // Finish button
+        var finishBtn = el('button', { class: 'btn primary' }, ['Finish Workout']);
+        finishBtn.addEventListener('click', async function() {
+            if (restTimer) { 
+                clearInterval(restTimer); 
+                restTimer = null; 
+            }
+            
+            // Process progression for completed exercises
+            await processWorkoutCompletion(session.exercises);
+            
+            // Save workout to database
+            try {
+                const workoutRecord = {
+                    date: session.date,
+                    template: session.template,
+                    isDeloadWeek: session.isDeloadWeek,
+                    exercises: session.exercises.map(ex => ({
+                        exerciseId: ex.name,
+                        sets: ex.sets,
+                        targetReps: ex.targetReps,
+                        currentLoad: ex.currentLoad || 0,
+                        completedSets: ex.completedSets || []
+                    })),
+                    startTime: session.date,
+                    endTime: new Date().toISOString(),
+                    notes: ''
+                };
+                
+                await window.db.insert('workouts', workoutRecord);
+                console.log('Workout saved:', workoutRecord);
+                
+                // Show success message
+                finishBtn.disabled = true;
+                finishBtn.textContent = '✓ Saved';
+                
+                // Refresh app data
+                await self.refreshData();
+                
+                // Show completion message
+                var completionMsg = el('div', { class: 'card', style: 'margin-top: 14px' }, [
+                    el('h3', {}, ['Workout Complete! 🎉']),
+                    el('div', {}, ['Mode: ' + workoutType]),
+                    el('div', {}, ['Sets logged: ' + session.exercises.reduce((sum, ex) => sum + (ex.completedSets?.length || 0), 0)]),
+                    el('div', { class: 'hr' }, []),
+                    el('div', { class: 'note' }, [
+                        isDeload ? 
+                        'Deload week complete. Next week returns to normal intensity.' :
+                        'Rest 2-3 minutes between sets for strength. Track progressive overload!'
+                    ]),
+                    el('div', { class: 'hr' }, []),
+                    el('button', { class: 'btn', onclick: function() { self.setTab('logs'); } }, ['View Workout History'])
+                ]);
+                
+                mainList.appendChild(completionMsg);
+                
+            } catch (error) {
+                console.error('Failed to save workout:', error);
+                alert('Error saving workout: ' + error.message);
+            }
+        });
+        
+        // Build left panel (demo + timer)
+        var left = el('div', { class: 'card' }, [
+            demo, 
+            el('div', { class: 'row' }, [
+                el('span', { class: 'badge' }, ['Rest']), 
+                timerBadge
+            ])
+        ]);
+        
+        // Build right panel (workout)
+        var rightContent = [];
+        
+        if (isDeload) {
+            rightContent.push(
+                el('div', { class: 'note', style: 'background: #2a4f86; padding: 10px; border-radius: 8px; margin-bottom: 10px' }, [
+                    '⚠️ DELOAD WEEK: Reduced volume and intensity for recovery. Next week returns to normal.'
+                ])
+            );
+        }
+        
+        if (warmups.length > 0) {
+            rightContent.push(
+                el('h3', {}, ['Warm-Up (5 min)']),
+                el('div', { class: 'note' }, ['Complete these exercises to prepare your body for the workout.']),
+                el('div', { class: 'hr' }, []),
+                warmupList,
+                el('div', { class: 'hr' }, [])
+            );
+        }
+        
+        var mainTitle = 'Main Workout';
+        if (workoutType === 'recovery') mainTitle = 'Recovery Stretching (20-30 min)';
+        
+        rightContent.push(
+            el('h3', {}, [mainTitle]),
+            mainList
+        );
+        
+        if (main.length > 0 && workoutType !== 'recovery') {
+            rightContent.push(
+                el('div', { class: 'hr' }, []),
+                finishBtn
+            );
+        } else if (workoutType === 'recovery') {
+            rightContent.push(
+                el('div', { class: 'hr' }, []),
+                el('div', { class: 'note' }, ['Take your time with each stretch. Hold for 30 seconds, breathe deeply, and relax into each position.'])
+            );
+        }
+        
+        var right = el('div', { class: 'card' }, rightContent);
+        
+        // Assemble page
+        root.innerHTML = '';
+        root.appendChild(header);
+        
+        if (workoutType === 'recovery') {
+            // Recovery day: just show stretches, no demo panel
+            root.appendChild(el('div', {}, [right]));
+        } else {
+            // Workout day: show demo + workout
+            root.appendChild(el('div', { class: 'grid' }, [left, right]));
+        }
+        
     })();
-
-    var mode = plan.mode;
-    var steps = plan.steps.slice();
-    var restSecs = (mode.indexOf('upper') >= 0 || mode === 'lowerB') ? self.data.settings.restGood : self.data.settings.restEasy;
-    var session = { date: new Date().toISOString(), mode: mode, items: [] };
-
-    var subtitle = mode === 'upperA' ? 'Push & Pull - Chest & Back Focus' : mode === 'lowerB' ? 'Power Legs - Squats & Deadlifts' : mode === 'upperC' ? 'Arms & Core - Shoulders & Biceps' : mode === 'easy' ? 'Easy Day (recovery mode)' : mode === 'recovery' ? 'Recovery / Stretch' : 'Today';
-
-    var header = el('div', { class: 'brand' }, [el('div', { class: 'dot' }, []), el('h2', {}, ['Today']), el('span', { class: 'sub' }, [subtitle])]);
-
-    var demo = el('div', { class: 'pic' }, []);
-    function setDemo(ex) { setDemoImageFor(demo, ex); }
-
-    console.log('Today plan:', mode, steps);
-
-    if (steps.length) setDemo(steps[0]);
-
-    var timerBadge = el('div', { class: 'badge' }, ['Ready']);
-    var restTimer = null, restRemain = 0;
-    function startRest(s) {
-        if (restTimer) clearInterval(restTimer);
-        restRemain = s; timerBadge.textContent = fmtClock(restRemain);
-        restTimer = setInterval(function () { restRemain -= 1; if (restRemain <= 0) { clearInterval(restTimer); restTimer = null; timerBadge.textContent = 'Ready'; } else { timerBadge.textContent = fmtClock(restRemain); } }, 1000);
-    }
-
-    var list = el('div', { class: 'list' }, []);
-    steps.forEach(function (ex) {
-        var perDB = (ex.type === 'upper') ? (self.data.loads[ex.name] || 15) : 0;
-        var title = el('div', { class: 'title' }, [el('span', { class: 'badge' }, [ex.type === 'upper' ? 'Str' : ex.type === 'lower' ? 'Leg' : 'Mob']), ' ' + ex.name + ' ', el('span', { class: 'badge' }, [ex.targetText || ''])]);
-        var meta = el('div', { class: 'meta' }, [(ex.type === 'upper' && ex.targetReps > 0) ? ('Target load: ' + perDB + ' lb per DB') : '', ex.light ? ' (light)' : '']);
-        var progress = el('div', { class: 'note' }, ['Progress: 0/' + ex.sets + ' sets']);
-
-        var struggled = el('input', { type: 'checkbox' }, []);
-        var repsInput = el('input', { type: 'number', min: '0', style: 'width:60px', placeholder: ex.targetReps.toString() });
-        var lbl = el('label', { class: 'note' }, ['Actual reps:']);
-        var doneBtn = el('button', { class: 'btn small' }, ['Mark done']);
-
-        doneBtn.addEventListener('click', function () {
-            setDemo(ex);
-            var actualReps = parseInt(repsInput.value) || ex.targetReps;
-            var weight = (ex.type === 'upper') ? suggestLoadFor(self.data, ex) : 0;
-            var failed = actualReps < ex.targetReps || struggled.checked;
-
-            session.items.push({ ex: ex.name, reps: actualReps, targetReps: ex.targetReps, weight: weight, fail: failed });
-
-            ex.curDone = (ex.curDone || 0) + 1;
-            progress.textContent = 'Progress: ' + ex.curDone + '/' + ex.sets + ' sets';
-            struggled.checked = false; repsInput.value = '';
-            startRest(restSecs);
-            if (ex.curDone >= ex.sets) doneBtn.disabled = true;
-        });
-
-        var row = el('div', { class: 'item', onclick: function () { setDemo(ex); } }, [title, meta, el('div', { class: 'row' }, [lbl, repsInput, el('label', { class: 'note' }, ['Struggled?']), struggled, doneBtn]), progress]);
-        list.appendChild(row);
-    });
-
-    var finishBtn = el('button', { class: 'btn primary' }, ['Finish Workout']);
-    finishBtn.addEventListener('click', function () {
-        if (restTimer) { clearInterval(restTimer); restTimer = null; }
-
-        var byEx = {};
-        session.items.forEach(function (it) { if (!byEx[it.ex]) byEx[it.ex] = []; byEx[it.ex].push(it); });
-
-        Object.keys(byEx).forEach(function (name) {
-            var exMeta = null; for (var i = 0; i < steps.length; i++) if (steps[i].name === name) { exMeta = steps[i]; break; }
-            if (!exMeta || exMeta.type !== 'upper') return;
-
-            var items = byEx[name], target = exMeta.targetReps || 0, success = true;
-            for (var k = 0; k < items.length; k++) { var it = items[k]; if ((it.reps || 0) < target || it.fail) { success = false; break; } }
-
-            var cur = App.data.loads[name] || 0;
-            if (success) { App.data.streaks.fails[name] = 0; App.data.loads[name] = Math.max(cur, Math.round((cur + 2.5) * 2) / 2); }
-            else { var fs = (App.data.streaks.fails[name] || 0) + 1; if (fs >= 2) { App.data.loads[name] = Math.round(Math.max(0, cur * 0.95) * 2) / 2; fs = 0; } App.data.streaks.fails[name] = fs; }
-        });
-
-        App.data.logs.push(session);
-        App.save();
-
-        var container = el('div', {}, []);
-        container.appendChild(el('div', { class: 'card' }, [el('h2', {}, ['Workout saved']), el('div', {}, ['Mode: ' + mode]), el('div', {}, ['Sets logged: ' + session.items.length]), el('div', { class: 'hr' }, []), el('div', { class: 'note' }, ['Tip: Rest 2-3 minutes between sets for strength. Track progressive overload!'])]));
-
-        return container;
-    });
-
-    var left = el('div', { class: 'card' }, [demo, el('div', { class: 'row' }, [el('span', { class: 'badge' }, ['Rest']), timerBadge])]);
-    var right = el('div', { class: 'card' }, [el('div', { class: 'row' }, [el('h3', {}, ['Workout Plan - ' + (mode === 'upperA' ? 'Push & Pull' : mode === 'lowerB' ? 'Power Legs' : mode === 'upperC' ? 'Arms & Core' : mode.charAt(0).toUpperCase() + mode.slice(1))])]), el('div', { class: 'hr' }, []), list, el('div', { class: 'hr' }, []), finishBtn]);
-
-    return el('div', {}, [header, el('div', { class: 'grid' }, [left, right])]);
+    
+    return root;
 }
