@@ -97,11 +97,11 @@ function createWindow() {
 function getAppIcon() {
   // Return appropriate icon based on platform
   if (process.platform === 'win32') {
-    return path.join(__dirname, 'assets', 'icon.ico');
+    return path.join(__dirname, 'src/assets/exercises', 'icon.ico');
   } else if (process.platform === 'darwin') {
-    return path.join(__dirname, 'assets', 'icon.icns');
+    return path.join(__dirname, 'src/assets/exercises', 'icon.icns');
   } else {
-    return path.join(__dirname, 'assets', 'icon.png');
+    return path.join(__dirname, 'src/assets/exercises', 'icon.png');
   }
 }
 

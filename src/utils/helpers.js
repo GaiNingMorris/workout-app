@@ -38,7 +38,17 @@ export const IMG_MAP = {
     "Hip Flexor Stretch": "hip_flexor_stretch"
 };
 export function getImgKey(name) { return IMG_MAP[name] || "stretch"; }
-export function setDemoImageFor(demoEl, ex) { try { var key = getImgKey(ex.name); if (demoEl && demoEl.style) demoEl.style.backgroundImage = "url('../assets/exercises/" + key + ".jpg')"; } catch (e) { console.error('setDemoImageFor error', e); } }
+
+export function setDemoImageFor(demoEl, ex) {
+    console.log('setDemoImageFor', demoEl, ex);
+    try {
+        var key = getImgKey(ex.name);
+        if (demoEl && demoEl.style)
+            demoEl.style.backgroundImage = "url('../assets/exercises/" + key + ".jpg')";
+    } catch (e) {
+        console.error('setDemoImageFor error', e);
+    }
+}
 
 // Simple storage helpers
 const KEY = 'nl_working';

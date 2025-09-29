@@ -1,6 +1,8 @@
 import { el, fmtClock, setDemoImageFor, suggestLoadFor, planUpperA, planLowerB, planUpperC, planRecovery, latestWeight } from '../utils/helpers.js';
 
 export function renderToday(App) {
+    console.log('Rendering Today page');
+
     var self = App;
     var plan = (function () {
         var today = new Date();
@@ -22,6 +24,9 @@ export function renderToday(App) {
 
     var demo = el('div', { class: 'pic' }, []);
     function setDemo(ex) { setDemoImageFor(demo, ex); }
+
+    console.log('Today plan:', mode, steps);
+
     if (steps.length) setDemo(steps[0]);
 
     var timerBadge = el('div', { class: 'badge' }, ['Ready']);

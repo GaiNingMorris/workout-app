@@ -22,6 +22,8 @@ const App = {
     daysSinceLast: function () { var last = this.lastWorkoutDate(); if (!last) return 999; var diff = (Date.now() - last.getTime()) / (1000 * 60 * 60 * 24); return Math.floor(diff); },
     buildToday: function () { var today = new Date(); var workoutType = (function (d) { var dow = d.getDay(); if (dow === 1) return 'upperA'; if (dow === 3) return 'lowerB'; if (dow === 5) return 'upperC'; return null; })(today); if (workoutType === 'upperA') return { mode: 'upperA', variant: 'A', steps: planUpperA(this.data) }; if (workoutType === 'lowerB') return { mode: 'lowerB', variant: 'B', steps: planLowerB(this.data) }; if (workoutType === 'upperC') return { mode: 'upperC', variant: 'C', steps: planUpperC(this.data) }; return { mode: 'recovery', variant: null, steps: planRecovery() }; },
     render: function () {
+        console.log('App render: current tab =', this.state.tab);
+
         try {
             var root = document.getElementById('app');
             if (!root) { console.error('Could not find #app element'); return; }
