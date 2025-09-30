@@ -131,16 +131,14 @@ export function renderToday(App) {
         
         main.forEach(function(ex) {
             // Prepare a placeholder meta element; we'll update it when async load fetch completes
-            var title = el('div', { class: 'title' }, [
-                el('span', { class: 'badge' }, [
-                    ex.type === 'upper' ? 'Str' : 
-                    ex.type === 'lower' ? 'Leg' : 
-                    ex.type === 'bodyweight' ? 'BW' :
-                    ex.type === 'stretch' ? 'Mob' : 'Ex'
-                ]), 
-                ' ' + ex.name + ' ', 
-                el('span', { class: 'badge' }, [ex.targetText || ''])
+            var typeBadge = el('span', { class: 'badge' }, [
+                ex.type === 'upper' ? 'Str' : 
+                ex.type === 'lower' ? 'Leg' : 
+                ex.type === 'bodyweight' ? 'BW' :
+                ex.type === 'stretch' ? 'Mob' : 'Ex'
             ]);
+            var targetBadge = el('span', { class: 'badge' }, [ex.targetText || '']);
+            var title = el('div', { class: 'title' }, [ typeBadge, ' ' + ex.name + ' ', targetBadge ]);
             // Default meta text for non-strength exercises; will be updated for upper/bodyweight when async data is available
             var defaultMeta = ex.detail || ex.targetText || '';
             var meta = el('div', { class: 'meta' }, [defaultMeta]);
@@ -165,12 +163,36 @@ export function renderToday(App) {
                         var progressNote = '';
                         if (succ !== null && req !== null) progressNote = ' (' + succ + '/' + req + ' success workouts)';
                         meta.textContent = 'Target load: ' + (ex.currentLoad || 15) + ' lb per DB.' + progressNote + ' ' + metaText;
+                        // update small badge showing target
+                        try { targetBadge.textContent = (ex.currentLoad || 15) + ' lb'; } catch (e) {}
                     } else if (ex.type === 'bodyweight' && ex.name && ex.name.toLowerCase().indexOf('push') >= 0) {
                         // For push-up bodyweight progression, fetch progression state and show current level
                         try {
                             const prog = await getProgressionFor('Push-Up');
                             if (prog && prog.currentLevel) {
                                 meta.textContent = (ex.targetText || '') + ' — Level: ' + prog.currentLevel;
+                                try { targetBadge.textContent = ex.targetText || ''; } catch (e) {}
+                            }
+                        } catch (pe) {
+                            // ignore progression fetch errors
+                        }
+                    } else if (ex.type === 'bodyweight' && ex.name && ex.name !== 'Bar Hang') {
+                        // Generic bodyweight progression (e.g., TRX Assisted Squat): fetch stored progression to override targetReps/targetText
+                        try {
+                            const prog = await getProgressionFor(ex.name);
+                            if (prog) {
+                                if (prog.targetReps !== undefined && prog.targetReps !== null) {
+                                    ex.targetReps = prog.targetReps;
+                                    ex.targetText = (ex.sets ? ex.sets : 1) + '×' + String(ex.targetReps);
+                                    try { targetBadge.textContent = ex.targetText || ''; } catch (e) {}
+                                }
+                                ex._consecutiveSuccesses = prog.consecutiveSuccesses || 0;
+                                if (ex._consecutiveSuccesses !== undefined && window.appSettings && window.appSettings.weightIncreaseConsecutive) {
+                                    ex._requiredConsecutive = window.appSettings.weightIncreaseConsecutive;
+                                    meta.textContent = (ex.detail || '') + ' (' + ex._consecutiveSuccesses + '/' + ex._requiredConsecutive + ' success workouts)';
+                                } else {
+                                    meta.textContent = ex.detail || ex.targetText || '';
+                                }
                             }
                         } catch (pe) {
                             // ignore progression fetch errors
@@ -301,6 +323,8 @@ export function renderToday(App) {
                 
                 // Refresh app data
                 await self.refreshData();
+                // Re-render the app (so updated progression/targets appear immediately)
+                try { self.render(); } catch (e) { /* ignore render errors */ }
                 
                 // Show completion message
                 var completionMsg = el('div', { class: 'card', style: 'margin-top: 14px' }, [

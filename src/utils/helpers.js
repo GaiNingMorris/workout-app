@@ -246,6 +246,20 @@ export async function updateProgression(exerciseName, level, consecutiveSuccesse
     }
 }
 
+// Generic progression field updater for arbitrary progression documents
+export async function updateProgressionFields(exerciseName, fields) {
+    try {
+        await window.db.update(
+            'progressions',
+            { exerciseId: exerciseName },
+            { $set: fields },
+            { upsert: true }
+        );
+    } catch (e) {
+        console.error('updateProgressionFields error', e);
+    }
+}
+
 // ============================================================================
 // DELOAD CALCULATOR
 // ============================================================================
@@ -371,8 +385,9 @@ export const Ex = {
     
     // Lower body strength
     trxSquat: function (sets, reps) { 
+        // TRX Assisted Squat is treated as bodyweight-assisted, not a loaded lower strength movement
         return ex("TRX Assisted Squat", sets, reps, 
-            "Hold TRX straps, sit back, pain-free range. 2s down/2s up.", "lower"); 
+            "Hold TRX straps, sit back, pain-free range. 2s down/2s up.", "bodyweight"); 
     },
     
     dbRDL: function (sets, reps) { 
@@ -611,16 +626,50 @@ export async function planForToday() {
 export async function processWorkoutCompletion(exercises) {
     // Process each exercise for progression
     for (const exercise of exercises) {
-        if (exercise.type === 'upper' && exercise.targetReps > 0) {
+        // Treat both upper and lower strength exercises as weight-based progression
+        if ((exercise.type === 'upper' || exercise.type === 'lower') && exercise.targetReps > 0) {
             // Weight-based progression
             await processWeightProgression(exercise);
         } else if (exercise.type === 'bodyweight' && exercise.name.includes('Push')) {
             // Bodyweight level progression
             await processBodyweightProgression(exercise);
+        } else if (exercise.type === 'bodyweight' && exercise.name !== 'Bar Hang') {
+            // Generic bodyweight reps progression (increment target reps by 1 after consecutive successes)
+            await processBodyweightRepsProgression(exercise);
         } else if (exercise.name === 'Bar Hang') {
             // Update best hang time
             await processHangProgression(exercise);
         }
+    }
+}
+
+async function processBodyweightRepsProgression(exercise) {
+    // Use 'progressions' collection to store per-exercise consecutive successes
+    const prog = await getProgressionFor(exercise.name);
+    // Check if all sets meet or exceed target reps and none marked struggled
+    const hitTarget = exercise.completedSets && exercise.completedSets.every(set => set.reps >= exercise.targetReps && !set.struggled);
+
+    // Get required consecutive successes from settings
+    const settings = await getSettings();
+    const requiredConsecutive = parseInt(settings.weightIncreaseConsecutive) || 3;
+
+    if (hitTarget) {
+        const newSucc = (prog.consecutiveSuccesses || 0) + 1;
+        if (newSucc >= requiredConsecutive) {
+            // Increase target reps by 1 and reset counter
+            const newTarget = (exercise.targetReps || 0) + 1;
+            // Persist change: update 'templates' via progression fields and reset consecutive counter
+            await updateProgressionFields(exercise.name, { consecutiveSuccesses: 0, targetReps: newTarget });
+            // Also update any live exercise object for immediate feedback
+            exercise.targetReps = newTarget;
+            exercise.targetText = String(exercise.sets) + "×" + String(newTarget);
+        } else {
+            // Update consecutive counter only
+            await updateProgressionFields(exercise.name, { consecutiveSuccesses: newSucc });
+        }
+    } else {
+        // Reset consecutive counter
+        await updateProgressionFields(exercise.name, { consecutiveSuccesses: 0 });
     }
 }
 
