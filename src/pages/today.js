@@ -54,6 +54,15 @@ export function renderToday(App) {
         // Demo image area
         var demo = el('div', { class: 'pic' }, []);
         function setDemo(ex) { setDemoImageFor(demo, ex); }
+        // Track selected exercise row for highlighting
+        var selectedRow = null;
+        function selectRow(row) {
+            try {
+                if (selectedRow && selectedRow !== row) selectedRow.classList.remove('selected');
+                selectedRow = row;
+                if (selectedRow) selectedRow.classList.add('selected');
+            } catch (e) { /* ignore */ }
+        }
         
         // Set initial demo image
         if (warmups.length > 0) setDemo(warmups[0]);
@@ -110,7 +119,7 @@ export function renderToday(App) {
                 
                 var row = el('div', { 
                     class: 'item', 
-                    onclick: function() { setDemo(ex); } 
+                    onclick: function(ev) { setDemo(ex); selectRow(ev.currentTarget || this); } 
                 }, [title, meta, doneBtn]);
                 
                 warmupList.appendChild(row);
@@ -214,7 +223,7 @@ export function renderToday(App) {
             
             var row = el('div', { 
                 class: 'item', 
-                onclick: function() { setDemo(ex); } 
+                onclick: function(ev) { setDemo(ex); selectRow(ev.currentTarget || this); } 
             }, [title, meta, controlRow, progress]);
             
             mainList.appendChild(row);
