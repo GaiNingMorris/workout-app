@@ -241,6 +241,18 @@ body {
   grid-template-columns: 1fr 360px;
 }
 
+/* Log page styles */
+.log-card {
+  margin-bottom: 12px;
+  padding: 12px;
+}
+
+.log-details {
+  background: rgba(16,34,66,0.04);
+  border-radius: 8px;
+  padding: 8px;
+}
+
 /* Group editor rows */
 .groups .item .row {
   display: grid;
