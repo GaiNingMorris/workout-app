@@ -53,7 +53,7 @@ export function renderGroups(App) {
         el('div', { class: 'hr' }, []),
         el('h3', {}, ['Progressive Overload System']),
         el('div', { class: 'note' }, [
-            'Weight-based exercises: +2.5 lbs on success, auto-deload after 2 failures'
+            'Weight-based exercises: +1.5 lbs on success, auto-deload after 2 failures'
         ]),
         el('div', { class: 'note' }, [
             'Bodyweight exercises: Progress through levels (wall → knee → full push-ups)'

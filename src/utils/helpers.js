@@ -171,6 +171,7 @@ export async function getLoadFor(exerciseName) {
                 currentWeight: 15,
                 lastIncreaseDate: new Date().toISOString(),
                 failStreak: 0,
+                consecutiveSuccesses: 0,
                 history: []
             };
             await window.db.insert('loads', defaultLoad);
@@ -179,7 +180,7 @@ export async function getLoadFor(exerciseName) {
         return load;
     } catch (e) {
         console.error('getLoadFor error', e);
-        return { currentWeight: 15, failStreak: 0 };
+        return { currentWeight: 15, failStreak: 0, consecutiveSuccesses: 0 };
     }
 }
 
@@ -192,6 +193,7 @@ export async function updateLoad(exerciseName, newWeight, failStreak) {
                 $set: { 
                     currentWeight: newWeight, 
                     failStreak: failStreak || 0,
+                    consecutiveSuccesses: 0,
                     lastIncreaseDate: new Date().toISOString()
                 }
             },
@@ -605,20 +607,48 @@ async function processWeightProgression(exercise) {
         );
     
     if (allSetsSuccess) {
-        // Success: increase weight by 2.5lbs
-        const newWeight = round05(load.currentWeight + 2.5);
-        await updateLoad(exercise.name, newWeight, 0);
-    } else {
-        // Failure: increment fail streak
-        const newFailStreak = (load.failStreak || 0) + 1;
-        
-        if (newFailStreak >= 2) {
-            // Auto-deload: reduce by 5%
-            const newWeight = round05(load.currentWeight * 0.95);
-            await updateLoad(exercise.name, newWeight, 0);
+        // Success: increment consecutive success counter
+        const prevSucc = (load.consecutiveSuccesses || 0) + 1;
+
+        if (prevSucc >= 3) {
+            // After 3 consecutive successful workouts, increase weight and reset counters
+            const newWeight = round05(load.currentWeight + 1.5);
+            await window.db.update(
+                'loads',
+                { exerciseId: exercise.name },
+                { $set: { currentWeight: newWeight, failStreak: 0, consecutiveSuccesses: 0, lastIncreaseDate: new Date().toISOString() } },
+                { upsert: true }
+            );
         } else {
-            // Keep weight, increment streak
-            await updateLoad(exercise.name, load.currentWeight, newFailStreak);
+            // Save incremented consecutive success count, keep weight and reset failStreak
+            await window.db.update(
+                'loads',
+                { exerciseId: exercise.name },
+                { $set: { consecutiveSuccesses: prevSucc, failStreak: 0 } },
+                { upsert: true }
+            );
+        }
+    } else {
+        // Failure: increment fail streak and reset consecutive successes
+        const newFailStreak = (load.failStreak || 0) + 1;
+
+        if (newFailStreak >= 2) {
+            // Auto-deload: reduce by 5% and reset counters
+            const newWeight = round05(load.currentWeight * 0.95);
+            await window.db.update(
+                'loads',
+                { exerciseId: exercise.name },
+                { $set: { currentWeight: newWeight, failStreak: 0, consecutiveSuccesses: 0, lastIncreaseDate: new Date().toISOString() } },
+                { upsert: true }
+            );
+        } else {
+            // Keep weight, increment fail streak and reset consecutive successes
+            await window.db.update(
+                'loads',
+                { exerciseId: exercise.name },
+                { $set: { currentWeight: load.currentWeight, failStreak: newFailStreak, consecutiveSuccesses: 0 } },
+                { upsert: true }
+            );
         }
     }
 }
