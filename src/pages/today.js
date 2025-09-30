@@ -295,14 +295,8 @@ export function renderToday(App) {
             }
         });
         
-        // Build left panel (demo + timer)
-        var left = el('div', { class: 'card' }, [
-            demo, 
-            el('div', { class: 'row' }, [
-                el('span', { class: 'badge' }, ['Rest']), 
-                timerBadge
-            ])
-        ]);
+        // Build left panel (demo only)
+        var left = el('div', { class: 'card' }, [demo]);
         
         // Build right panel (workout)
         var rightContent = [];
@@ -345,7 +339,7 @@ export function renderToday(App) {
             );
         }
         
-        var right = el('div', { class: 'card' }, rightContent);
+    var right = el('div', { class: 'card right-panel' }, rightContent);
         
         // Assemble page
         root.innerHTML = '';

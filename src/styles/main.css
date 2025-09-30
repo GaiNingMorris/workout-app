@@ -149,10 +149,12 @@ body {
 }
 
 .item {
-  border: 1px solid var(--border);
+  border: 1px solid rgba(31,51,85,0.6);
   border-radius: 12px;
-  padding: 10px;
-  background: #0e1a2d
+  padding: 12px 14px;
+  background: linear-gradient(180deg, rgba(15,27,45,0.6), rgba(10,18,30,0.6));
+  box-shadow: 0 2px 8px rgba(6,12,24,0.4);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
 }
 
 .item.selected {
@@ -164,21 +166,24 @@ body {
 .item .title {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-weight: 600
+  gap: 10px;
+  font-weight: 700;
+  font-size: 15px;
 }
 
 .item .meta {
   color: var(--muted);
-  font-size: 12px;
-  margin: 4px 0
+  font-size: 13px;
+  margin: 6px 0 10px;
+  line-height: 1.35;
 }
 
 .progress {
   height: 8px;
-  background: #0f2444;
+  background: linear-gradient(90deg, rgba(15,36,68,0.6), rgba(8,18,34,0.6));
   border-radius: 999px;
-  overflow: hidden
+  overflow: hidden;
+  margin-top: 8px;
 }
 
 .progress>div {
@@ -189,6 +194,65 @@ body {
 .note {
   color: var(--muted);
   font-size: 12px
+}
+
+/* Improve controls layout inside exercise items */
+.item .row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+.item input[type="number"] {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(31,51,85,0.6);
+  color: var(--text);
+  padding: 6px 8px;
+  border-radius: 8px;
+  width: 80px;
+}
+
+.item input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+}
+
+.item .btn.small {
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.item:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 26px rgba(6,12,24,0.5);
+}
+
+.item.selected {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 10px 30px rgba(34,102,204,0.14);
+  background: linear-gradient(180deg, rgba(28,56,102,0.12), rgba(12,24,44,0.08));
+}
+
+/* Tighter badge styles for clarity */
+.badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(10,18,30,0.6);
+  color: var(--muted);
+  border: 1px solid rgba(31,51,85,0.6);
+  font-size: 12px;
+}
+
+.title .badge {
+  font-weight: 700;
+  color: var(--accent);
+  background: rgba(102,179,255,0.06);
+  border-color: rgba(50,105,180,0.18);
 }
 
 .kv {
@@ -251,6 +315,17 @@ body {
   background: rgba(16,34,66,0.04);
   border-radius: 8px;
   padding: 8px;
+}
+
+/* Today page right panel scroll behavior */
+.right-panel {
+  max-height: calc(100vh - 160px); /* leave room for header and padding */
+  overflow: auto;
+  padding-right: 8px; /* room for scrollbar */
+}
+
+.right-panel .list {
+  padding-right: 6px;
 }
 
 /* Group editor rows */

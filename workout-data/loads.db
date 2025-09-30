@@ -1,18 +1,18 @@
-{"exerciseId":"Bench-Supported Dumbbell Press","currentWeight":17.5,"lastIncreaseDate":"2025-09-30T01:47:48.010Z","failStreak":0,"history":[],"_id":"3oW2lgR2A1JrBF9x"}
-{"exerciseId":"Seated Dumbbell Row","currentWeight":17.5,"lastIncreaseDate":"2025-09-30T01:47:48.026Z","failStreak":0,"history":[],"_id":"9cEll6fa0nMIVO9g"}
-{"exerciseId":"Seated Dumbbell Shoulder Press","currentWeight":17.5,"lastIncreaseDate":"2025-09-30T01:47:48.013Z","failStreak":0,"history":[],"_id":"NSPjhza74MkW0T5V"}
-{"$$deleted":true,"_id":"3oW2lgR2A1JrBF9x"}
-{"$$deleted":true,"_id":"9cEll6fa0nMIVO9g"}
-{"$$deleted":true,"_id":"NSPjhza74MkW0T5V"}
-{"exerciseId":"Bench-Supported Dumbbell Press","currentWeight":15,"lastIncreaseDate":"2025-09-30T01:55:58.038Z","failStreak":0,"history":[],"_id":"2FxjM1MOS1SgehgB"}
-{"exerciseId":"Seated Dumbbell Shoulder Press","currentWeight":15,"lastIncreaseDate":"2025-09-30T01:55:58.048Z","failStreak":0,"history":[],"_id":"ght0XIgHlT41qYI7"}
-{"exerciseId":"Seated Dumbbell Row","currentWeight":15,"lastIncreaseDate":"2025-09-30T01:55:58.050Z","failStreak":0,"history":[],"_id":"5aSEAHvzT2FdDGwK"}
-{"exerciseId":"Bench-Supported Dumbbell Press","currentWeight":17.5,"lastIncreaseDate":"2025-09-30T01:56:25.278Z","failStreak":0,"history":[],"_id":"2FxjM1MOS1SgehgB"}
-{"exerciseId":"Seated Dumbbell Shoulder Press","currentWeight":17.5,"lastIncreaseDate":"2025-09-30T01:56:25.283Z","failStreak":0,"history":[],"_id":"ght0XIgHlT41qYI7"}
-{"exerciseId":"Seated Dumbbell Row","currentWeight":17.5,"lastIncreaseDate":"2025-09-30T01:56:25.289Z","failStreak":0,"history":[],"_id":"5aSEAHvzT2FdDGwK"}
-{"exerciseId":"Bench-Supported Dumbbell Press","currentWeight":20,"lastIncreaseDate":"2025-09-30T02:04:15.834Z","failStreak":0,"history":[],"_id":"2FxjM1MOS1SgehgB"}
-{"exerciseId":"Seated Dumbbell Shoulder Press","currentWeight":20,"lastIncreaseDate":"2025-09-30T02:04:15.838Z","failStreak":0,"history":[],"_id":"ght0XIgHlT41qYI7"}
-{"exerciseId":"Seated Dumbbell Row","currentWeight":20,"lastIncreaseDate":"2025-09-30T02:04:15.845Z","failStreak":0,"history":[],"_id":"5aSEAHvzT2FdDGwK"}
-{"exerciseId":"Bench-Supported Dumbbell Press","currentWeight":22.5,"lastIncreaseDate":"2025-09-30T02:04:51.876Z","failStreak":0,"history":[],"_id":"2FxjM1MOS1SgehgB"}
-{"exerciseId":"Seated Dumbbell Shoulder Press","currentWeight":22.5,"lastIncreaseDate":"2025-09-30T02:04:51.880Z","failStreak":0,"history":[],"_id":"ght0XIgHlT41qYI7"}
-{"exerciseId":"Seated Dumbbell Row","currentWeight":22.5,"lastIncreaseDate":"2025-09-30T02:04:51.894Z","failStreak":0,"history":[],"_id":"5aSEAHvzT2FdDGwK"}
+{"exerciseId":"Bench-Supported Dumbbell Press","currentWeight":25,"lastIncreaseDate":"2025-09-30T02:25:28.736Z","failStreak":0,"history":[],"_id":"2FxjM1MOS1SgehgB"}
+{"exerciseId":"Seated Dumbbell Row","currentWeight":25,"lastIncreaseDate":"2025-09-30T02:25:28.758Z","failStreak":0,"history":[],"_id":"5aSEAHvzT2FdDGwK"}
+{"exerciseId":"Seated Dumbbell Shoulder Press","currentWeight":25,"lastIncreaseDate":"2025-09-30T02:25:28.741Z","failStreak":0,"history":[],"_id":"ght0XIgHlT41qYI7"}
+{"exerciseId":"Bench-Supported Dumbbell Press","currentWeight":25,"lastIncreaseDate":"2025-09-30T02:44:54.840Z","failStreak":1,"history":[],"_id":"2FxjM1MOS1SgehgB"}
+{"exerciseId":"Seated Dumbbell Shoulder Press","currentWeight":27.5,"lastIncreaseDate":"2025-09-30T02:44:54.845Z","failStreak":0,"history":[],"_id":"ght0XIgHlT41qYI7"}
+{"exerciseId":"Seated Dumbbell Row","currentWeight":27.5,"lastIncreaseDate":"2025-09-30T02:44:54.853Z","failStreak":0,"history":[],"_id":"5aSEAHvzT2FdDGwK"}
+{"exerciseId":"Bench-Supported Dumbbell Press","currentWeight":27.5,"lastIncreaseDate":"2025-09-30T02:46:09.629Z","failStreak":0,"history":[],"_id":"2FxjM1MOS1SgehgB"}
+{"exerciseId":"Seated Dumbbell Shoulder Press","currentWeight":30,"lastIncreaseDate":"2025-09-30T02:46:09.633Z","failStreak":0,"history":[],"_id":"ght0XIgHlT41qYI7"}
+{"exerciseId":"Seated Dumbbell Row","currentWeight":30,"lastIncreaseDate":"2025-09-30T02:46:09.638Z","failStreak":0,"history":[],"_id":"5aSEAHvzT2FdDGwK"}
+{"$$deleted":true,"_id":"2FxjM1MOS1SgehgB"}
+{"$$deleted":true,"_id":"5aSEAHvzT2FdDGwK"}
+{"$$deleted":true,"_id":"ght0XIgHlT41qYI7"}
+{"exerciseId":"Bench-Supported Dumbbell Press","currentWeight":15,"lastIncreaseDate":"2025-09-30T02:50:38.052Z","failStreak":0,"history":[],"_id":"grs1X1pz04uWaEGw"}
+{"exerciseId":"Seated Dumbbell Shoulder Press","currentWeight":15,"lastIncreaseDate":"2025-09-30T02:50:38.054Z","failStreak":0,"history":[],"_id":"MQTPmf2ESbwgYhyF"}
+{"exerciseId":"Seated Dumbbell Row","currentWeight":15,"lastIncreaseDate":"2025-09-30T02:50:38.058Z","failStreak":0,"history":[],"_id":"tmS7hlMRg3LXinle"}
+{"exerciseId":"Bench-Supported Dumbbell Press","currentWeight":15,"lastIncreaseDate":"2025-09-30T02:50:49.657Z","failStreak":1,"history":[],"_id":"grs1X1pz04uWaEGw"}
+{"exerciseId":"Seated Dumbbell Shoulder Press","currentWeight":17.5,"lastIncreaseDate":"2025-09-30T02:50:49.661Z","failStreak":0,"history":[],"_id":"MQTPmf2ESbwgYhyF"}
+{"exerciseId":"Seated Dumbbell Row","currentWeight":17.5,"lastIncreaseDate":"2025-09-30T02:50:49.676Z","failStreak":0,"history":[],"_id":"tmS7hlMRg3LXinle"}
