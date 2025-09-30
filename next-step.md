@@ -17,7 +17,7 @@ Phase 2: Exercise Library ✓
  Thursday (Upper Pull) workout
  Friday (Lower Posterior) workout
 Phase 3: Progression System ✓
- Weight-based progression (+2.5 lbs on success)
+ Weight-based progression (+1.5 lbs on success)
  Auto-deload after 2 failures
  Bodyweight progression (wall → knee → full push-ups)
  Conditional unlocks (bar hangs, chin-ups)
@@ -91,6 +91,7 @@ Progression System
  Weight stays same after failed workout
  Weight decreases after 2 consecutive failures
  Push-up level advances after 2 successful workouts
+Consecutive success rule: weight-based exercises require 3 consecutive successful workouts by default before the next weight increase; both required consecutive count and per-step increment (default 1.5 lb) are configurable in Settings.
 Goals Page
  Can add bodyweight entry
  Bodyweight history displays correctly
@@ -163,7 +164,7 @@ Add demo image to src/assets/exercises/
 Adjust Progression
 Weight progression:
 
-Success increment: Line with + 2.5
+Success increment: Line with + 1.5
 Deload percentage: Line with * 0.95
 Fail threshold: Line with >= 2
 Bodyweight progression:

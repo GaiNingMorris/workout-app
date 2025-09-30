@@ -1,4 +1,4 @@
-import { el, planForToday, getUserProfile, getSettings } from './utils/helpers.js';
+import { el, planForToday, getUserProfile, getSettings, ensureLoadsMigration } from './utils/helpers.js';
 import { renderToday } from './pages/today.js';
 import { renderSchedule } from './pages/schedule.js';
 import { renderGoals } from './pages/goals.js';
@@ -30,11 +30,19 @@ const App = {
         try {
             this.user = await getUserProfile();
             this.settings = await getSettings();
+            // Expose settings to window for UI components to read tuning values
+            try { window.appSettings = this.settings; } catch (e) { /* ignore */ }
             console.log('User profile loaded:', this.user);
             console.log('Settings loaded:', this.settings);
         } catch (e) {
             console.error('Failed to load initial data:', e);
         }
+
+        // Ensure loads records include consecutiveSuccesses for new progression logic
+        try {
+            const res = await ensureLoadsMigration();
+            if (res && res.updated) console.log('Loads migration updated', res.updated, 'records');
+        } catch (e) { console.error('Loads migration error', e); }
         
         this.render();
     },
@@ -48,6 +56,7 @@ const App = {
         // Reload user profile and settings
         this.user = await getUserProfile();
         this.settings = await getSettings();
+        try { window.appSettings = this.settings; } catch (e) { /* ignore */ }
     },
     
     render: function () {

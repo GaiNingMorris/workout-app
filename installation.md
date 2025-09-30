@@ -61,6 +61,8 @@ After launching for the first time:
 4. Go to **Settings** page
 5. Verify rest timers (default: 120s for strength, 90s for easy)
 
+6. Note: Weight progression uses a "consecutive successes" rule by default (3 successful workouts in a row required to increase weight by 1.5 lb). You can change the required consecutive count and the per-step increment on the **Settings** page.
+
 You're ready to start your first workout!
 
 ## Troubleshooting

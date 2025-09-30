@@ -109,6 +109,9 @@ export async function getSettings() {
                 enableMicroloading: true,
                 audioAlerts: false,
                 darkMode: true,
+                // Weight progression tuning
+                weightIncreaseAmount: 1.5,
+                weightIncreaseConsecutive: 3,
                 programStartDate: new Date().toISOString(),
                 lastDeloadDate: null,
                 deloadInterval: 8
@@ -396,12 +399,34 @@ export const Ex = {
         return ex(name, sets, reps, detail, "bodyweight");
     },
     
-    plank: function (sets, seconds) { 
-        var o = ex("Plank", sets, 0, 
-            "Hold strong position. Straight line from head to heels.", "bodyweight"); 
-        o.targetReps = 0; 
-        o.targetText = String(seconds) + "s holds"; 
-        return o; 
+    plank: function (sets, reps, seconds) {
+        // Support both call styles:
+        //  - plank(sets, seconds)          -> legacy (seconds passed as 2nd arg)
+        //  - plank(sets, reps, seconds)    -> modern (reps===0 for time-based)
+        var actualReps = 0;
+        var actualSeconds = 0;
+
+        if (seconds === undefined) {
+            // legacy signature: (sets, seconds)
+            actualSeconds = reps || 0;
+            actualReps = 0;
+        } else {
+            actualReps = reps || 0;
+            actualSeconds = seconds || 0;
+        }
+
+        var o = ex("Plank", sets, actualReps, 
+            "Hold strong position. Straight line from head to heels.", "bodyweight");
+
+        if (actualReps === 0) {
+            o.targetReps = 0;
+            if (actualSeconds > 0) o.targetText = String(sets) + "×" + String(actualSeconds) + "s";
+            else o.targetText = "";
+        } else {
+            o.targetText = String(sets) + "×" + String(actualReps);
+        }
+
+        return o;
     },
     
     barHang: function (sets, seconds) { 
@@ -460,7 +485,7 @@ export async function planMonday() {
         Ex.dbShoulder(isDeload ? 2 : 3, isDeload ? 6 : 8, "Seated Dumbbell Shoulder Press"),
         Ex.pushUp(2, 20, pushUpProg.currentLevel),
         Ex.dbRow(isDeload ? 2 : 3, isDeload ? 8 : 10, "Seated Dumbbell Row", true),
-        Ex.plank(2, isDeload ? 20 : 30)
+        Ex.plank(3, 0, isDeload ? 20 : 10)
     ];
     
     return { warmups: warmups, main: main, isDeload: isDeload };
@@ -477,7 +502,7 @@ export async function planTuesday() {
         Ex.trxSquat(isDeload ? 2 : 3, isDeload ? 6 : 8),
         Ex.dbRDL(isDeload ? 1 : 2, isDeload ? 8 : 10),
         Ex.gluteBridge(isDeload ? 1 : 2, isDeload ? 10 : 12),
-        Ex.plank(2, isDeload ? 20 : 30)
+        Ex.plank(3, 0, isDeload ? 20 : 10)
     ];
     
     return { warmups: warmups, main: main, isDeload: isDeload };
@@ -509,7 +534,7 @@ export async function planThursday() {
         main.push(Ex.barHang(2, isDeload ? 15 : 20));
     }
     
-    main.push(Ex.plank(2, isDeload ? 35 : 45));
+    main.push(Ex.plank(3, 0, isDeload ? 35 : 45));
     
     return { warmups: warmups, main: main, isDeload: isDeload };
 }
@@ -525,7 +550,7 @@ export async function planFriday() {
         Ex.dbRDL(isDeload ? 2 : 3, isDeload ? 6 : 8),
         Ex.trxSquat(isDeload ? 1 : 2, isDeload ? 8 : 10),
         Ex.stepUp(isDeload ? 1 : 2, isDeload ? 6 : 8),
-        Ex.plank(2, isDeload ? 20 : 30)
+        Ex.plank(3, 0, isDeload ? 20 : 10)
     ];
     
     return { warmups: warmups, main: main, isDeload: isDeload };
@@ -605,14 +630,18 @@ async function processWeightProgression(exercise) {
         exercise.completedSets.every(set => 
             set.reps >= exercise.targetReps && !set.struggled
         );
+    // Read progression tuning from settings (defaults set in getSettings)
+    const settings = await getSettings();
+    const increaseAmount = parseFloat(settings.weightIncreaseAmount) || 1.5;
+    const requiredConsecutive = parseInt(settings.weightIncreaseConsecutive) || 3;
     
     if (allSetsSuccess) {
         // Success: increment consecutive success counter
         const prevSucc = (load.consecutiveSuccesses || 0) + 1;
 
-        if (prevSucc >= 3) {
-            // After 3 consecutive successful workouts, increase weight and reset counters
-            const newWeight = round05(load.currentWeight + 1.5);
+        if (prevSucc >= requiredConsecutive) {
+            // After required consecutive successful workouts, increase weight and reset counters
+            const newWeight = round05(load.currentWeight + increaseAmount);
             await window.db.update(
                 'loads',
                 { exerciseId: exercise.name },
@@ -732,5 +761,28 @@ export async function resetData() {
     } catch (e) {
         console.error('resetData error', e);
         return { ok: false, error: String(e) };
+    }
+}
+
+// Ensure all load records include the consecutiveSuccesses field (safe migration)
+export async function ensureLoadsMigration() {
+    try {
+        const loads = await window.db.find('loads', {});
+        if (!loads || loads.length === 0) return { updated: 0 };
+        let updated = 0;
+        for (const l of loads) {
+            if (l.consecutiveSuccesses === undefined) {
+                await window.db.update(
+                    'loads',
+                    { _id: l._id },
+                    { $set: { consecutiveSuccesses: 0 } }
+                );
+                updated += 1;
+            }
+        }
+        return { updated };
+    } catch (e) {
+        console.error('ensureLoadsMigration error', e);
+        return { updated: 0, error: String(e) };
     }
 }

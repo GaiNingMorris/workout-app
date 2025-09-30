@@ -25,14 +25,38 @@ export function renderSettings(App) {
             value: String(settings.deloadInterval || 8)
         }, []);
 
+        // Weight progression tuning
+        var weightIncreaseAmount = el('input', {
+            class: 'input',
+            type: 'number',
+            step: '0.1',
+            value: String(settings.weightIncreaseAmount || 1.5)
+        }, []);
+
+        var weightIncreaseConsecutive = el('input', {
+            class: 'input',
+            type: 'number',
+            value: String(settings.weightIncreaseConsecutive || 3)
+        }, []);
+
         var saveBtn = el('button', { class: 'btn' }, ['Save Settings']);
         saveBtn.addEventListener('click', async function() {
             var restStrength = parseInt(restGood.value, 10) || 120;
             var restEasySec = parseInt(restEasy.value, 10) || 90;
             var deloadWeeks = parseInt(deloadInterval.value, 10) || 8;
+            var weightInc = parseFloat(weightIncreaseAmount.value) || 1.5;
+            var weightReq = parseInt(weightIncreaseConsecutive.value, 10) || 3;
             
             if (deloadWeeks < 4 || deloadWeeks > 12) {
                 alert('Deload interval should be between 4 and 12 weeks');
+                return;
+            }
+            if (weightInc <= 0) {
+                alert('Weight increase must be greater than 0');
+                return;
+            }
+            if (weightReq < 1 || weightReq > 10) {
+                alert('Consecutive successes should be between 1 and 10');
                 return;
             }
             
@@ -42,7 +66,9 @@ export function renderSettings(App) {
                 { $set: { 
                     restTimerStrength: restStrength,
                     restTimerEasy: restEasySec,
-                    deloadInterval: deloadWeeks
+                    deloadInterval: deloadWeeks,
+                    weightIncreaseAmount: weightInc,
+                    weightIncreaseConsecutive: weightReq
                 }}
             );
             
@@ -124,6 +150,14 @@ export function renderSettings(App) {
             el('div', { class: 'kv' }, [
                 el('label', {}, ['Deload every (weeks)']),
                 deloadInterval
+            ]),
+            el('div', { class: 'kv' }, [
+                el('label', {}, ['Weight increase (lb)']),
+                weightIncreaseAmount
+            ]),
+            el('div', { class: 'kv' }, [
+                el('label', {}, ['Consecutive successes required']),
+                weightIncreaseConsecutive
             ]),
             el('div', { class: 'row', style: 'margin-top: 10px' }, [saveBtn])
         ]);

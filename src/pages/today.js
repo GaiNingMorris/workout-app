@@ -1,4 +1,4 @@
-import { el, fmtClock, setDemoImageFor, planForToday, workoutTypeForDate, getLoadFor, processWorkoutCompletion } from '../utils/helpers.js';
+import { el, fmtClock, setDemoImageFor, planForToday, workoutTypeForDate, getLoadFor, getProgressionFor, processWorkoutCompletion } from '../utils/helpers.js';
 
 export function renderToday(App) {
     console.log('Rendering Today page');
@@ -130,14 +130,7 @@ export function renderToday(App) {
         var mainList = el('div', { class: 'list' }, []);
         
         main.forEach(function(ex) {
-            // Get current load for strength exercises
-            (async function() {
-                if (ex.type === 'upper') {
-                    const load = await getLoadFor(ex.name);
-                    ex.currentLoad = load.currentWeight;
-                }
-            })();
-            
+            // Prepare a placeholder meta element; we'll update it when async load fetch completes
             var title = el('div', { class: 'title' }, [
                 el('span', { class: 'badge' }, [
                     ex.type === 'upper' ? 'Str' : 
@@ -148,12 +141,49 @@ export function renderToday(App) {
                 ' ' + ex.name + ' ', 
                 el('span', { class: 'badge' }, [ex.targetText || ''])
             ]);
-            
-            var metaText = ex.detail || '';
-            if (ex.type === 'upper' && ex.targetReps > 0) {
-                metaText = 'Target load: ' + (ex.currentLoad || 15) + ' lb per DB. ' + metaText;
-            }
-            var meta = el('div', { class: 'meta' }, [metaText]);
+            // Default meta text for non-strength exercises; will be updated for upper/bodyweight when async data is available
+            var defaultMeta = ex.detail || ex.targetText || '';
+            var meta = el('div', { class: 'meta' }, [defaultMeta]);
+
+            // Fetch current load asynchronously and update the meta text when ready
+            (async function() {
+                try {
+                    if (ex.type === 'upper') {
+                        const load = await getLoadFor(ex.name);
+                        ex.currentLoad = load.currentWeight;
+                        // expose consecutive successes for UI display
+                        ex._consecutiveSuccesses = load.consecutiveSuccesses || 0;
+                        // get required consecutive from settings if present (best-effort)
+                        if (window.appSettings && window.appSettings.weightIncreaseConsecutive) {
+                            ex._requiredConsecutive = window.appSettings.weightIncreaseConsecutive;
+                        }
+
+                        // Update meta text to show the accurate load and progress
+                        var metaText = ex.detail || '';
+                        var succ = (ex._consecutiveSuccesses !== undefined) ? ex._consecutiveSuccesses : null;
+                        var req = (ex._requiredConsecutive !== undefined) ? ex._requiredConsecutive : null;
+                        var progressNote = '';
+                        if (succ !== null && req !== null) progressNote = ' (' + succ + '/' + req + ' success workouts)';
+                        meta.textContent = 'Target load: ' + (ex.currentLoad || 15) + ' lb per DB.' + progressNote + ' ' + metaText;
+                    } else if (ex.type === 'bodyweight' && ex.name && ex.name.toLowerCase().indexOf('push') >= 0) {
+                        // For push-up bodyweight progression, fetch progression state and show current level
+                        try {
+                            const prog = await getProgressionFor('Push-Up');
+                            if (prog && prog.currentLevel) {
+                                meta.textContent = (ex.targetText || '') + ' — Level: ' + prog.currentLevel;
+                            }
+                        } catch (pe) {
+                            // ignore progression fetch errors
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error fetching load for', ex.name, e);
+                    // leave meta as-is or show fallback
+                    if (!meta.textContent || meta.textContent.indexOf('Loading') >= 0) {
+                        meta.textContent = ex.detail || '';
+                    }
+                }
+            })();
             
             var progress = el('div', { class: 'note' }, ['Progress: 0/' + ex.sets + ' sets']);
             

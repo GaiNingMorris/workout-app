@@ -98,7 +98,7 @@ workout-app/
 ## 💪 Progressive Overload System
 
 ### Weight-Based Exercises (Dumbbells)
-- **Success**: Hit all target reps without struggle → +2.5 lbs
+- **Success**: Hit all target reps without struggle — counts as one successful workout. After 3 consecutive successful workouts the weight increases by +1.5 lbs (defaults: 1.5 lb increase after 3 consecutive successes; both values are configurable in **Settings**).
 - **Failure**: Miss reps or struggle → increment fail streak
 - **Auto-Deload**: 2 consecutive failures → -5% weight, reset streak
 - **Microloading**: Rounds to nearest 0.5 lb

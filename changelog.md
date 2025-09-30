@@ -22,6 +22,7 @@ Conditional exercise unlocks:
 Bar hangs unlock at ≤200 lbs bodyweight
 Assisted chin-ups unlock at ≥30s hang time
 8-week auto-deload cycles with automatic triggering
+Consecutive success tuning: weight-based exercises now require consecutive successful workouts (default: 3) before the weight increases; the increment defaults to +1.5 lb and is configurable in Settings.
 Enhanced fail tracking with 2-failure deload threshold
 Database & Storage
 NeDB integration for robust data persistence
@@ -68,7 +69,7 @@ Data Storage
 Old: Single workout-data.json file
 New: workout-data/ folder with 6 NeDB collections
 Progression Logic
-Old: Simple weight +2.5 lbs on success
+Old: Simple weight +1.5 lbs on success
 New: Multi-faceted progression (weight, bodyweight levels, unlocks)
 🗑️ Removed
 Old 3-day split templates (upperA, lowerB, upperC)
