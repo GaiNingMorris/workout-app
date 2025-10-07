@@ -1,10 +1,10 @@
 import { el, planForToday, getUserProfile, getSettings, ensureLoadsMigration } from './utils/helpers.js';
-import { renderToday } from './pages/today.js';
-import { renderSchedule } from './pages/schedule.js';
-import { renderGoals } from './pages/goals.js';
-import { renderLogs } from './pages/logs.js';
-import { renderGroups } from './pages/groups.js';
-import { renderSettings } from './pages/settings.js';
+import { Performance, DatabaseOptimization } from './utils/performance.js';
+// Performance: Lazy load page modules for faster startup
+import { renderToday } from './pages/today.js'; // Keep today page for fast initial load
+
+// Lazy-loaded page modules (loaded only when needed)
+let renderSchedule, renderGoals, renderLogs, renderGroups, renderSettings, renderCharts, renderNutrition, renderRecipes, renderAnalytics;
 
 const App = {
     state: { tab: 'today' },
@@ -48,8 +48,27 @@ const App = {
     },
     
     setTab: function (t) { 
+        // Performance: Show loading state for smooth transitions
+        if (t !== this.state.tab) {
+            var root = document.getElementById('app');
+            if (root) {
+                root.style.opacity = '0.7';
+                root.style.transition = 'opacity 0.15s ease-out';
+            }
+        }
+        
         this.state.tab = t; 
-        this.render(); 
+        this.render().then(() => {
+            // Restore opacity after render complete
+            if (root) {
+                root.style.opacity = '1';
+            }
+        }).catch(() => {
+            // Fallback if render fails
+            if (root) {
+                root.style.opacity = '1';
+            }
+        }); 
     },
     
     async refreshData() {
@@ -59,7 +78,8 @@ const App = {
         try { window.appSettings = this.settings; } catch (e) { /* ignore */ }
     },
     
-    render: function () {
+    render: async function () {
+        Performance.startRender();
         console.log('App render: current tab =', this.state.tab);
 
         try {
@@ -69,27 +89,92 @@ const App = {
                 return; 
             }
             
-            root.innerHTML = '';
-            root.appendChild(this.navbar());
+            // Performance: Use batch DOM updates
+            await Performance.batchDOMUpdates([
+                () => {
+                    root.innerHTML = '';
+                    root.appendChild(this.navbar());
+                }
+            ]);
 
             var currentPage;
-            if (this.state.tab === 'today') currentPage = renderToday(this);
-            else if (this.state.tab === 'schedule') currentPage = renderSchedule(this);
-            else if (this.state.tab === 'goals') currentPage = renderGoals(this);
-            else if (this.state.tab === 'logs') currentPage = renderLogs(this);
-            else if (this.state.tab === 'settings') currentPage = renderSettings(this);
-            else if (this.state.tab === 'groups') currentPage = renderGroups(this);
-            else currentPage = renderToday(this);
+            
+            // Performance: Lazy load page modules only when needed
+            if (this.state.tab === 'today') {
+                currentPage = renderToday(this);
+            } else if (this.state.tab === 'schedule') {
+                if (!renderSchedule) {
+                    const module = await import('./pages/schedule.js');
+                    renderSchedule = module.renderSchedule;
+                }
+                currentPage = renderSchedule(this);
+            } else if (this.state.tab === 'goals') {
+                if (!renderGoals) {
+                    const module = await import('./pages/goals.js');
+                    renderGoals = module.renderGoals;
+                }
+                currentPage = renderGoals(this);
+            } else if (this.state.tab === 'charts') {
+                if (!renderCharts) {
+                    const module = await import('./pages/charts.js');
+                    renderCharts = module.renderCharts;
+                }
+                currentPage = renderCharts(this);
+            } else if (this.state.tab === 'analytics') {
+                if (!renderAnalytics) {
+                    const module = await import('./pages/analytics.js');
+                    renderAnalytics = module.renderAnalytics;
+                }
+                currentPage = renderAnalytics(this);
+            } else if (this.state.tab === 'nutrition') {
+                if (!renderNutrition) {
+                    const module = await import('./pages/nutrition.js');
+                    renderNutrition = module.renderNutrition;
+                }
+                currentPage = renderNutrition(this);
+            } else if (this.state.tab === 'recipes') {
+                if (!renderRecipes) {
+                    const module = await import('./pages/recipes.js');
+                    renderRecipes = module.renderRecipes;
+                }
+                currentPage = renderRecipes(this);
+            } else if (this.state.tab === 'logs') {
+                if (!renderLogs) {
+                    const module = await import('./pages/logs.js');
+                    renderLogs = module.renderLogs;
+                }
+                currentPage = renderLogs(this);
+            } else if (this.state.tab === 'settings') {
+                if (!renderSettings) {
+                    const module = await import('./pages/settings.js');
+                    renderSettings = module.renderSettings;
+                }
+                currentPage = renderSettings(this);
+            } else if (this.state.tab === 'groups') {
+                if (!renderGroups) {
+                    const module = await import('./pages/groups.js');
+                    renderGroups = module.renderGroups;
+                }
+                currentPage = renderGroups(this);
+            } else {
+                currentPage = renderToday(this);
+            }
 
             if (currentPage && currentPage.nodeType) {
-                root.appendChild(currentPage);
+                await Performance.batchDOMUpdates([
+                    () => root.appendChild(currentPage)
+                ]);
             } else { 
                 console.error('Invalid page element returned for tab:', this.state.tab, currentPage); 
-                root.appendChild(el('div', { class: 'card' }, [
-                    el('h2', {}, ['Error']), 
-                    el('div', {}, ['Failed to load page: ' + this.state.tab])
-                ])); 
+                await Performance.batchDOMUpdates([
+                    () => root.appendChild(el('div', { class: 'card' }, [
+                        el('h2', {}, ['Error']), 
+                        el('div', {}, ['Failed to load page: ' + this.state.tab])
+                    ]))
+                ]);
             }
+            
+            Performance.endRender();
         } catch (error) {
             console.error('Render error:', error);
             var root = document.getElementById('app');
@@ -111,6 +196,10 @@ const App = {
             mk('Today', 'today'), 
             mk('Schedule', 'schedule'), 
             mk('Goals', 'goals'), 
+            mk('Charts', 'charts'),
+            mk('Analytics', 'analytics'),
+            mk('Nutrition', 'nutrition'),
+            mk('Recipes', 'recipes'),
             mk('Logs', 'logs'), 
             mk('Settings', 'settings'), 
             mk('Groups', 'groups')

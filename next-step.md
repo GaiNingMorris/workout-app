@@ -148,7 +148,7 @@ Verify NeDB is installed: npm list nedb
 Change Default Values
 In src/utils/helpers.js:
 
-Starting weight: Line in defaultData() → currentWeight: 262
+Starting weight: Line in defaultData() → currentWeight: 262.4
 Target weight: Line in defaultData() → targetWeight: 165
 Rest timers: restTimerStrength: 120, restTimerEasy: 90
 In workout plan functions:

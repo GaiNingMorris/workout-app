@@ -17,7 +17,10 @@
 }
 
 * {
-  box-sizing: border-box
+  box-sizing: border-box;
+  /* Performance: Enable hardware acceleration for smooth animations */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
 }
 
 :root {
@@ -28,7 +31,11 @@
   --border: #1f3355;
   --accent: #66b3ff;
   --ok: #7CFFB2;
-  --warn: #FFC46B
+  --warn: #FFC46B;
+  /* Performance: Optimize animations with will-change */
+  --transition-fast: 0.15s ease-out;
+  --transition-normal: 0.3s ease-out;
+  --transition-slow: 0.5s ease-out;
 }
 
 html,
@@ -36,7 +43,13 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font: 15px/1.5 system-ui, Segoe UI, Inter, Arial
+  font: 15px/1.5 system-ui, Segoe UI, Inter, Arial;
+  /* Performance: Optimize text rendering */
+  text-rendering: optimizeSpeed;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Performance: Prevent unnecessary repaints */
+  contain: layout style paint;
 }
 
 #app {
@@ -57,12 +70,22 @@ body {
   border: 1px solid var(--border);
   border-radius: 999px;
   background: #0e1a2d;
-  cursor: pointer
+  cursor: pointer;
+  /* Performance: Smooth tab transitions */
+  transition: all var(--transition-fast);
+  will-change: background-color, border-color, transform;
+}
+
+.tab:hover {
+  background: #152238;
+  transform: translateY(-1px);
 }
 
 .tab.active {
   background: linear-gradient(135deg, #203a66, #182b49);
-  border-color: #284877
+  border-color: #284877;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .brand {
@@ -89,7 +112,10 @@ body {
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 14px;
-  padding: 14px
+  padding: 14px;
+  /* Performance: Optimize card rendering */
+  contain: layout style paint;
+  will-change: transform;
 }
 
 .badge {
@@ -108,7 +134,21 @@ body {
   border: 1px solid var(--border);
   background: #102242;
   color: var(--text);
-  cursor: pointer
+  cursor: pointer;
+  /* Performance: Smooth button interactions */
+  transition: all var(--transition-fast);
+  will-change: transform, background-color;
+}
+
+.btn:hover {
+  background: #1a2f54;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.btn:active {
+  transform: translateY(0);
+  transition-duration: 0.05s;
 }
 
 .btn.small {
@@ -133,6 +173,56 @@ body {
   height: 1px;
   background: var(--border);
   margin: 10px 0
+}
+
+/* Performance optimizations for charts and large content */
+.charts-container {
+  contain: layout style paint;
+  /* Optimize scrolling performance */
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+.chart-section {
+  contain: layout;
+  /* Performance: Isolate chart rendering */
+  isolation: isolate;
+}
+
+/* Optimize progress bars and animations */
+.score-bar, .progress-bar {
+  overflow: hidden;
+  /* Performance: Use GPU for progress animations */
+  transform: translateZ(0);
+}
+
+.score-fill {
+  transition: width var(--transition-normal);
+  will-change: width;
+}
+
+/* Optimize list rendering */
+.food-log-entry, .workout-entry {
+  contain: layout style;
+  /* Performance: Prevent layout thrashing in lists */
+  transform: translateZ(0);
+}
+
+/* Smooth hover states for interactive elements */
+.clickable, [onclick] {
+  transition: all var(--transition-fast);
+  will-change: transform;
+}
+
+.clickable:hover, [onclick]:hover {
+  transform: translateY(-1px);
+}
+
+/* Optimize canvas elements */
+canvas {
+  /* Performance: Enable hardware acceleration for charts */
+  transform: translateZ(0);
+  image-rendering: optimizeSpeed;
 }
 
 .row {
@@ -368,4 +458,118 @@ body {
   .groups .item .row .note {
     display: none;
   }
+}
+
+/* Charts Page Styles */
+.charts-container {
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.chart-section {
+    background: #16213e;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 30px;
+    border: 1px solid #1a1a2e;
+}
+
+.chart-title {
+    color: #7CFFB2;
+    font-size: 24px;
+    margin: 0 0 10px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.chart-description {
+    color: #b0b0b0;
+    margin-bottom: 20px;
+    font-style: italic;
+}
+
+.chart-placeholder {
+    background: #0a0a1a;
+    border-radius: 8px;
+    border: 2px solid #1a1a2e;
+    padding: 40px;
+    text-align: center;
+    color: #7CFFB2;
+}
+
+.placeholder-icon {
+    font-size: 48px;
+    margin-bottom: 15px;
+}
+
+.placeholder-text {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.placeholder-subtext {
+    color: #b0b0b0;
+    font-size: 14px;
+}
+
+/* Game Score Header */
+.game-score-header {
+    background: linear-gradient(135deg, #16213e, #1a1a2e);
+    border-radius: 15px;
+    padding: 25px;
+    margin-bottom: 30px;
+    border: 2px solid #7CFFB2;
+    text-align: center;
+}
+
+.score-display {
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.score-title {
+    font-size: 24px;
+    font-weight: bold;
+    color: #7CFFB2;
+    margin-bottom: 15px;
+}
+
+.score-value {
+    font-size: 32px;
+    font-weight: bold;
+    color: #FFFFFF;
+    margin-bottom: 10px;
+}
+
+.score-percentage {
+    font-size: 48px;
+    font-weight: bold;
+    color: #7CFFB2;
+    margin-bottom: 15px;
+    text-shadow: 0 0 10px rgba(124, 255, 178, 0.5);
+}
+
+.score-bar {
+    background: #2a2a3e;
+    height: 20px;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 15px;
+    border: 1px solid #1a1a2e;
+}
+
+.score-fill {
+    height: 100%;
+    transition: width 0.5s ease;
+    border-radius: 10px;
+}
+
+.score-message {
+    font-size: 18px;
+    font-weight: bold;
+    color: #FFD93D;
+    margin-top: 10px;
 }

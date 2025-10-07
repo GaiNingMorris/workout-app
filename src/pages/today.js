@@ -1,8 +1,7 @@
-import { el, fmtClock, setDemoImageFor, planForToday, workoutTypeForDate, getLoadFor, getProgressionFor, processWorkoutCompletion } from '../utils/helpers.js';
+import { el, fmtClock, setDemoImageFor, planForToday, workoutTypeForDate, getLoadFor, getProgressionFor, processWorkoutCompletion, getWorkoutSubtitle } from '../utils/helpers.js';
+import { getFastingStatus, getFastingMotivation } from '../utils/nutrition.js';
 
 export function renderToday(App) {
-    console.log('Rendering Today page');
-
     var self = App;
     var root = el('div', {}, []);
     
@@ -36,20 +35,41 @@ export function renderToday(App) {
         const isDeload = plan.isDeload || false;
         
         // Determine subtitle
-        var subtitle = '';
-        if (workoutType === 'monday') subtitle = 'Upper Push - Chest, Shoulders, Triceps';
-        else if (workoutType === 'tuesday') subtitle = 'Lower Quad - Squats & Glutes';
-        else if (workoutType === 'thursday') subtitle = 'Upper Pull - Back & Biceps';
-        else if (workoutType === 'friday') subtitle = 'Lower Posterior - Hamstrings & Glutes';
-        else if (workoutType === 'recovery') subtitle = 'Recovery Day - Static Stretching';
-        
-        if (isDeload) subtitle = 'DELOAD WEEK - ' + subtitle;
+        var subtitle = getWorkoutSubtitle(workoutType, isDeload);
         
         var header = el('div', { class: 'brand' }, [
             el('div', { class: 'dot' }, []), 
             el('h2', {}, ['Today']), 
             el('span', { class: 'sub' }, [subtitle])
         ]);
+        
+        // Get fasting status
+        const user = await window.db.findOne('user', { _id: 'user_profile' });
+        const fastingStatus = getFastingStatus(user?.lastMealTime);
+        const motivation = getFastingMotivation(fastingStatus);
+        
+        // Fasting status card (compact for workout page)
+        var fastingCard = null;
+        if (fastingStatus.fastingHours > 0) {
+            fastingCard = el('div', { 
+                class: 'card', 
+                style: 'margin: 10px 0; padding: 12px; border-left: 3px solid ' + motivation.color 
+            }, [
+                el('div', { class: 'row', style: 'align-items: center; justify-content: space-between;' }, [
+                    el('div', {}, [
+                        el('span', { style: 'font-weight: bold; color: ' + motivation.color }, [
+                            '🕐 Fast: ' + fastingStatus.fastingHours + 'h ' + fastingStatus.fastingMinutes + 'm'
+                        ]),
+                        el('span', { class: 'note', style: 'margin-left: 10px;' }, [fastingStatus.status])
+                    ]),
+                    el('button', { 
+                        class: 'btn small', 
+                        style: 'background: ' + motivation.color + '; color: #0a0a1a; padding: 4px 8px;',
+                        onclick: () => self.setTab('nutrition')
+                    }, ['Nutrition'])
+                ])
+            ]);
+        }
         
         // Demo image area
         var demo = el('div', { class: 'pic' }, []);
@@ -69,19 +89,27 @@ export function renderToday(App) {
         else if (main.length > 0) setDemo(main[0]);
         
         // Rest timer
-        var timerBadge = el('div', { class: 'badge' }, ['Ready']);
+        var timerBadge = el('div', { 
+            class: 'badge', 
+            style: 'background: #2a4f86; color: white; padding: 8px 12px; border-radius: 6px; font-weight: bold; margin-left: 10px;'
+        }, ['Ready']);
         var restTimer = null, restRemain = 0;
         
         function startRest(s) {
             if (restTimer) clearInterval(restTimer);
             restRemain = s; 
             timerBadge.textContent = fmtClock(restRemain);
+            timerBadge.style.background = '#FF6B6B'; // Red during rest
+            timerBadge.style.color = 'white';
+            
             restTimer = setInterval(function () { 
                 restRemain -= 1; 
                 if (restRemain <= 0) { 
                     clearInterval(restTimer); 
                     restTimer = null; 
                     timerBadge.textContent = 'Ready'; 
+                    timerBadge.style.background = '#7CFFB2'; // Green when ready
+                    timerBadge.style.color = '#0a0a1a';
                 } else { 
                     timerBadge.textContent = fmtClock(restRemain); 
                 } 
@@ -220,49 +248,177 @@ export function renderToday(App) {
             var lbl = el('label', { class: 'note' }, ['Actual reps:']);
             var doneBtn = el('button', { class: 'btn small' }, ['Mark done']);
             
+            // Timer for time-based exercises (like plank)
+            var timerDisplay, timerBtn, currentTimer, targetSeconds = 30;
+            var isTimeBased = ex.targetReps === 0 && ex.targetText && ex.targetText.includes('s');
+            
+            if (isTimeBased) {
+                // Extract target seconds from targetText (e.g., "3×30s" -> 30)
+                var match = ex.targetText.match(/(\d+)s/);
+                if (match) targetSeconds = parseInt(match[1]);
+                
+                timerDisplay = el('div', { 
+                    class: 'timer-display',
+                    style: 'font-size: 24px; font-weight: bold; color: #7CFFB2; margin: 10px 0;'
+                }, [targetSeconds + 's']);
+                
+                timerBtn = el('button', { 
+                    class: 'btn', 
+                    style: 'background: #7CFFB2; color: #0a0a1a; margin-right: 10px;'
+                }, ['Start Timer']);
+                
+                var isRunning = false;
+                var timeLeft = targetSeconds;
+                
+                timerBtn.addEventListener('click', function() {
+                    if (timerBtn.textContent === 'Reset') {
+                        // Reset timer
+                        timeLeft = targetSeconds;
+                        timerDisplay.textContent = targetSeconds + 's';
+                        timerDisplay.style.color = '#7CFFB2';
+                        timerBtn.textContent = 'Start Timer';
+                        timerBtn.style.background = '#7CFFB2';
+                        isRunning = false;
+                        if (currentTimer) clearInterval(currentTimer);
+                    } else if (!isRunning) {
+                        // Start timer
+                        isRunning = true;
+                        timerBtn.textContent = 'Stop Timer';
+                        timerBtn.style.background = '#FF6B6B';
+                        
+                        currentTimer = setInterval(function() {
+                            timeLeft--;
+                            timerDisplay.textContent = timeLeft + 's';
+                            
+                            if (timeLeft <= 0) {
+                                clearInterval(currentTimer);
+                                timerDisplay.textContent = '✓ Done!';
+                                timerDisplay.style.color = '#7CFFB2';
+                                timerBtn.textContent = 'Reset';
+                                timerBtn.style.background = '#FFD93D';
+                                isRunning = false;
+                                
+                                // Play a simple audio cue if possible
+                                try {
+                                    var audio = new Audio();
+                                    audio.src = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmMcBzuP1fPQfCwGJXLB8OGUQQwUW7Hn7KpZFgxGk+Dpv2MdBzqL0/LVhiwGKW3A7+OWRQ0VWqvk6q1XFQxChN3ovGQcBzmI0fnLKj';
+                                    audio.play();
+                                } catch (e) {
+                                    // Audio failed, use visual feedback
+                                    document.body.style.background = '#7CFFB2';
+                                    setTimeout(() => document.body.style.background = '', 200);
+                                }
+                            }
+                        }, 1000);
+                    } else {
+                        // Stop timer
+                        clearInterval(currentTimer);
+                        isRunning = false;
+                        timerBtn.textContent = 'Reset';
+                        timerBtn.style.background = '#FFD93D';
+                    }
+                });
+            }
+            
             // Initialize completed sets tracking
             if (!ex.completedSets) ex.completedSets = [];
             
-            doneBtn.addEventListener('click', function() {
-                setDemo(ex);
-                var actualReps = parseInt(repsInput.value) || ex.targetReps;
-                var isStruggled = struggled.checked;
-                
-                // Record this set
-                ex.completedSets.push({
-                    reps: actualReps,
-                    weight: ex.currentLoad || 0,
-                    struggled: isStruggled,
-                    timestamp: new Date().toISOString()
-                });
-                
-                ex.curDone = (ex.curDone || 0) + 1;
-                progress.textContent = 'Progress: ' + ex.curDone + '/' + ex.sets + ' sets';
-                
-                // Reset inputs
-                struggled.checked = false; 
-                repsInput.value = '';
-                
-                // Start rest timer
-                if (ex.type !== 'stretch') {
+            // Add event listener only for non-stretch exercises (stretches get their own handler above)
+            if (ex.type !== 'stretch') {
+                doneBtn.addEventListener('click', function() {
+                    setDemo(ex);
+                    var actualReps = isTimeBased ? 1 : (parseInt(repsInput.value) || ex.targetReps);
+                    var isStruggled = struggled.checked;
+                    
+                    // Record this set
+                    ex.completedSets.push({
+                        reps: actualReps,
+                        weight: ex.currentLoad || 0,
+                        struggled: isStruggled,
+                        timestamp: new Date().toISOString(),
+                        timeSeconds: isTimeBased ? (targetSeconds || 30) : 0
+                    });
+                    
+                    ex.curDone = (ex.curDone || 0) + 1;
+                    progress.textContent = 'Progress: ' + ex.curDone + '/' + ex.sets + ' sets';
+                    
+                    // Reset inputs
+                    struggled.checked = false;
+                    if (!isTimeBased) {
+                        repsInput.value = '';
+                    }
+                    
+                    // Disable the done button and start mandatory rest period
+                    if (ex.curDone < ex.sets) {
+                        doneBtn.disabled = true;
+                        var restCountdown = restSecs;
+                        doneBtn.textContent = `Rest: ${fmtClock(restCountdown)}`;
+                        doneBtn.style.background = '#FF6B6B';
+                        doneBtn.style.color = 'white';
+                        doneBtn.title = 'Mandatory rest between sets. Shift+Click to skip.';
+                        
+                        var restInterval = setInterval(function() {
+                            restCountdown--;
+                            if (restCountdown <= 0) {
+                                clearInterval(restInterval);
+                                doneBtn.disabled = false;
+                                doneBtn.textContent = 'Mark done';
+                                doneBtn.style.background = '';
+                                doneBtn.style.color = '';
+                                doneBtn.title = '';
+                                // Visual notification that rest is complete
+                                doneBtn.style.background = '#7CFFB2';
+                                setTimeout(() => {
+                                    doneBtn.style.background = '';
+                                }, 1000);
+                                
+                                // Optional: Play sound notification
+                                try {
+                                    var audio = new Audio();
+                                    audio.src = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmMcBzuP1fPQfCwGJXLB8OGUQQwUW7Hn7KpZFgxGk';
+                                    audio.play();
+                                } catch (e) {
+                                    // Audio failed, just visual feedback
+                                }
+                            } else {
+                                doneBtn.textContent = `Rest: ${fmtClock(restCountdown)}`;
+                            }
+                        }, 1000);
+                        
+                        // Allow advanced users to skip rest with Shift+Click
+                        doneBtn.addEventListener('click', function(e) {
+                            if (e.shiftKey && doneBtn.disabled) {
+                                clearInterval(restInterval);
+                                doneBtn.disabled = false;
+                                doneBtn.textContent = 'Mark done';
+                                doneBtn.style.background = '';
+                                doneBtn.style.color = '';
+                                doneBtn.title = '';
+                            }
+                        });
+                    }
+                    
+                    // Start visual rest timer
                     startRest(restSecs);
-                }
-                
-                if (ex.curDone >= ex.sets) {
-                    doneBtn.disabled = true;
-                    doneBtn.textContent = '✓ Complete';
-                }
-            });
+                    
+                    if (ex.curDone >= ex.sets) {
+                        doneBtn.disabled = true;
+                        doneBtn.textContent = '✓ Complete';
+                        doneBtn.style.background = '#7CFFB2';
+                        doneBtn.style.color = '#0a0a1a';
+                        
+                        // Clear any running timer
+                        if (currentTimer) {
+                            clearInterval(currentTimer);
+                        }
+                    }
+                });
+            }
             
-            var controlRow = el('div', { class: 'row' }, [
-                lbl, repsInput, 
-                el('label', { class: 'note' }, ['Struggled?']), 
-                struggled, 
-                doneBtn
-            ]);
+            var controlRow;
             
-            // For stretches, simpler interface
             if (ex.type === 'stretch') {
+                // Simple interface for stretches - no mandatory rest
                 controlRow = el('div', { class: 'row' }, [doneBtn]);
                 doneBtn.textContent = 'Complete';
                 doneBtn.addEventListener('click', function() {
@@ -270,7 +426,28 @@ export function renderToday(App) {
                     ex.curDone = 1;
                     doneBtn.disabled = true;
                     doneBtn.textContent = '✓ Done';
+                    doneBtn.style.background = '#7CFFB2';
+                    doneBtn.style.color = '#0a0a1a';
                 }, true);
+            } else if (isTimeBased) {
+                // Timer interface for time-based exercises (like plank)
+                controlRow = el('div', { class: 'row', style: 'flex-direction: column; align-items: center;' }, [
+                    timerDisplay,
+                    el('div', { style: 'margin: 10px 0;' }, [
+                        timerBtn,
+                        el('label', { class: 'note', style: 'margin-left: 15px;' }, ['Struggled?']), 
+                        struggled
+                    ]),
+                    doneBtn
+                ]);
+            } else {
+                // Regular rep-based interface
+                controlRow = el('div', { class: 'row' }, [
+                    lbl, repsInput, 
+                    el('label', { class: 'note' }, ['Struggled?']), 
+                    struggled, 
+                    doneBtn
+                ]);
             }
             
             var row = el('div', { 
@@ -315,7 +492,7 @@ export function renderToday(App) {
                 };
                 
                 await window.db.insert('workouts', workoutRecord);
-                console.log('Workout saved:', workoutRecord);
+                // Workout saved successfully
                 
                 // Show success message
                 finishBtn.disabled = true;
@@ -338,7 +515,12 @@ export function renderToday(App) {
                         'Rest 2-3 minutes between sets for strength. Track progressive overload!'
                     ]),
                     el('div', { class: 'hr' }, []),
-                    el('button', { class: 'btn', onclick: function() { self.setTab('logs'); } }, ['View Workout History'])
+                    el('div', { class: 'note', style: 'background: #7CFFB2; color: #0a0a1a; padding: 8px; border-radius: 4px; margin: 8px 0;' }, [
+                        '🎮 Your fitness game score has been updated! Check the Charts tab to see your latest progress and achievements.'
+                    ]),
+                    el('button', { class: 'btn', onclick: function() { self.setTab('logs'); } }, ['View Workout History']),
+                    el('button', { class: 'btn', style: 'background: #7CFFB2; color: #0a0a1a; margin-left: 8px;', onclick: function() { self.setTab('charts'); } }, ['🎮 View Fitness Score']),
+                    el('button', { class: 'btn', style: 'background: #FFB84D; color: #0a0a1a; margin-left: 8px;', onclick: function() { self.setTab('nutrition'); } }, ['🍽️ Track Nutrition'])
                 ]);
                 
                 mainList.appendChild(completionMsg);
@@ -354,6 +536,14 @@ export function renderToday(App) {
         
         // Build right panel (workout)
         var rightContent = [];
+        
+        // Add rest timer display to right panel
+        rightContent.push(
+            el('div', { class: 'note', style: 'background: #1a2332; padding: 10px; border-radius: 8px; margin-bottom: 10px; text-align: center;' }, [
+                el('strong', {}, ['Rest Timer: ']),
+                timerBadge
+            ])
+        );
         
         if (isDeload) {
             rightContent.push(
@@ -398,6 +588,11 @@ export function renderToday(App) {
         // Assemble page
         root.innerHTML = '';
         root.appendChild(header);
+        
+        // Add fasting status if available
+        if (fastingCard) {
+            root.appendChild(fastingCard);
+        }
         
         if (workoutType === 'recovery') {
             // Recovery day: just show stretches, no demo panel

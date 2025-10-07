@@ -1,0 +1,47 @@
+<svg width="300" height="200" xmlns="http://www.w3.org/2000/svg">Placeholder for Step-Up Exercise
+
+  <rect width="300" height="200" fill="#f0f8ff"/>
+
+  This is a simple text-based placeholder image for the Step-Up exercise.
+
+  <!-- Platform/step -->
+
+  <rect x="130" y="140" width="80" height="40" fill="#8b4513" stroke="#654321" stroke-width="2"/>Instructions:
+
+  - Use a stable platform or step
+
+  <!-- Person stepping up -->- Step up one leg at a time
+
+  <circle cx="170" cy="80" r="16" fill="#fdbcb4" stroke="#333" stroke-width="2"/>- Control the movement 
+
+  <rect x="164" y="96" width="12" height="30" fill="#4169e1" rx="6"/>- Keep it knee-safe
+
+  
+
+  <!-- Arms for balance -->Replace this file with a proper exercise demonstration image (landscape ~1200×800px recommended)
+  <line x1="164" y1="106" x2="140" y2="100" stroke="#fdbcb4" stroke-width="6" stroke-linecap="round"/>
+  <line x1="176" y1="106" x2="200" y2="100" stroke="#fdbcb4" stroke-width="6" stroke-linecap="round"/>
+  
+  <!-- Stepping leg on platform -->
+  <rect x="165" y="126" width="10" height="15" fill="#333" rx="5"/>
+  <ellipse cx="170" cy="145" rx="12" ry="6" fill="#333"/>
+  
+  <!-- Other leg stepping up -->
+  <ellipse cx="150" cy="130" rx="8" ry="20" fill="#333" transform="rotate(-15 150 130)"/>
+  <ellipse cx="145" cy="145" rx="10" ry="6" fill="#333"/>
+  
+  <!-- Motion arrow showing upward movement -->
+  <path d="M 120 130 L 120 110" stroke="#ff6b6b" stroke-width="3" marker-end="url(#arrowhead)"/>
+  <text x="90" y="125" font-family="Arial, sans-serif" font-size="12" fill="#ff6b6b">Step Up</text>
+  
+  <!-- Ground line -->
+  <line x1="50" y1="180" x2="250" y2="180" stroke="#654321" stroke-width="2"/>
+  
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#ff6b6b"/>
+    </marker>
+  </defs>
+  
+  <text x="150" y="195" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#333">STEP-UP</text>
+</svg>

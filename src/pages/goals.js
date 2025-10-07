@@ -1,4 +1,5 @@
 import { el, todayISO, getUserProfile, getSettings, weeksUntilDeload, nextDeloadDate, getProgressionFor } from '../utils/helpers.js';
+import { USER_CONFIG, getUserProfileDescription } from '../config/userConfig.js';
 
 export function renderGoals(App) {
     var self = App;
@@ -13,20 +14,57 @@ export function renderGoals(App) {
         var daysSinceStart = Math.floor((Date.now() - firstLogDate.getTime()) / (1000 * 60 * 60 * 24));
         var weeksSinceStart = Math.floor(daysSinceStart / 7);
 
-        function getExpectedGains(weeks) {
-            if (weeks <= 2) return { strength: '5-10%', visible: 'Minimal', note: 'Neural adaptations starting' };
-            if (weeks <= 8) return { strength: '15-25%', visible: 'Noticeable', note: 'Visible changes emerging' };
-            if (weeks <= 24) return { strength: '25-35%', visible: 'Significant', note: 'Major muscle development' };
-            if (weeks <= 52) return { strength: '35-50%', visible: 'Substantial', note: '1-year transformation complete' };
-            if (weeks <= 104) return { strength: '50-70%', visible: 'Advanced', note: 'Year 2: Refined physique' };
-            if (weeks <= 156) return { strength: '60-80%', visible: 'Expert', note: 'Year 3: Peak development' };
-            if (weeks <= 260) return { strength: '70-90%', visible: 'Mastery', note: 'Years 4-5: Strength mastery' };
-            return { strength: '80%+ gains', visible: 'Lifetime', note: 'Decades of health & vitality' };
+        function getExpectedGains(weeks, userAge, userGender, startWeight, targetWeight) {
+            // Realistic expectations based on user profile
+            var weightToLose = Math.max(0, startWeight - targetWeight);
+            var ageMultiplier = userAge > 50 ? 0.8 : userAge > 40 ? 0.9 : 1.0; // Slower progress for older adults
+            var genderMultiplier = userGender === 'female' ? 0.85 : 1.0; // Different expectations
+            
+            if (weeks <= 4) return { 
+                strength: Math.round(15 * ageMultiplier) + '%', 
+                weight: Math.round(weeks * 1.5 * ageMultiplier) + ' lbs progress', 
+                visible: 'Better posture, energy', 
+                note: 'Neural adaptations, movement patterns improving' 
+            };
+            if (weeks <= 12) return { 
+                strength: Math.round(35 * ageMultiplier) + '%', 
+                weight: Math.round(weeks * 1.2 * ageMultiplier) + ' lbs progress', 
+                visible: 'Clothes fitting better', 
+                note: 'Noticeable strength gains, habit formation' 
+            };
+            if (weeks <= 24) return { 
+                strength: Math.round(55 * ageMultiplier) + '%', 
+                weight: Math.round(Math.min(weeks * 1.0 * ageMultiplier, weightToLose * 0.6)) + ' lbs progress', 
+                visible: 'Clear muscle definition', 
+                note: 'Major body composition changes' 
+            };
+            if (weeks <= 52) return { 
+                strength: Math.round(85 * ageMultiplier) + '%', 
+                weight: Math.round(Math.min(weeks * 0.8 * ageMultiplier, weightToLose * 0.8)) + ' lbs progress', 
+                visible: 'Transformation visible', 
+                note: 'Year 1: Foundation built, significant progress' 
+            };
+            if (weeks <= 104) return { 
+                strength: Math.round(130 * ageMultiplier) + '%', 
+                weight: weightToLose > 0 ? 'Near goal weight!' : 'Maintaining target', 
+                visible: 'Athletic appearance', 
+                note: 'Year 2: Advanced strength, body composition optimized' 
+            };
+            return { 
+                strength: Math.round(150 * ageMultiplier) + '%+', 
+                weight: 'Goal achieved!', 
+                visible: 'Peak physique maintained', 
+                note: 'Maintenance phase: Health & vitality optimized' 
+            };
         }
 
-        var expected = getExpectedGains(weeksSinceStart);
-        var weeksToDeload = weeksUntilDeload(settings.programStartDate);
-        var nextDeload = nextDeloadDate(settings.programStartDate);
+
+
+        var expected = getExpectedGains(weeksSinceStart, user.age || 50, user.gender || 'male', 
+                                        user.bodyweightHistory?.[0]?.weight || user.currentWeight, 
+                                        user.targetWeight);
+        var weeksToDeload = await weeksUntilDeload(settings.programStartDate);
+        var nextDeload = await nextDeloadDate(settings.programStartDate);
 
         // Weight tracking
         var weightInput = el('input', { class: 'input', placeholder: 'Weight (lb)', type: 'number', step: '0.1' }, []);
@@ -56,9 +94,27 @@ export function renderGoals(App) {
                 { $set: { currentWeight: w, bodyweightHistory: history } }
             );
             
+            // Update nutrition targets with new weight
+            try {
+                const { updateCurrentWeight } = await import('../utils/nutrition.js');
+                await updateCurrentWeight(w);
+            } catch (error) {
+                console.error('Error updating nutrition targets:', error);
+            }
+            
             weightInput.value = '';
             await self.refreshData();
             self.render();
+            
+            // Show success message
+            var weightChange = user.currentWeight - w;
+            if (weightChange > 0) {
+                alert('🎉 Weight logged: ' + w + ' lbs (-' + weightChange.toFixed(1) + ' lbs progress!)\n\nNutrition targets automatically updated.');
+            } else if (weightChange < 0) {
+                alert('Weight logged: ' + w + ' lbs\n\nNutrition targets automatically updated.');
+            } else {
+                alert('Weight logged: ' + w + ' lbs\n\nNutrition targets automatically updated.');
+            }
         });
 
         // Hang time tracking
@@ -89,7 +145,7 @@ export function renderGoals(App) {
             class: 'input', 
             placeholder: 'Overall bodyweight goal (lb)', 
             type: 'number',
-            value: String(user.targetWeight || 165) 
+            value: String(user.targetWeight || USER_CONFIG.targetWeight) 
         }, []);
         
         var saveTarget = el('button', { class: 'btn' }, ['Save Goal']);
@@ -111,8 +167,8 @@ export function renderGoals(App) {
         });
 
         // Calculate unlock progress
-        var currentWeight = user.currentWeight || 262;
-        var targetForHangs = 200;
+        var currentWeight = user.currentWeight || USER_CONFIG.startingWeight;
+        var targetForHangs = USER_CONFIG.barHangUnlockWeight;
         var weightToLose = Math.max(0, currentWeight - targetForHangs);
         var hangUnlocked = currentWeight <= targetForHangs;
         var chinUnlocked = hangUnlocked && (user.bestHangTime || 0) >= 30;
@@ -134,7 +190,8 @@ export function renderGoals(App) {
             el('div', { style: 'margin: 10px 0;' }, [
                 el('strong', {}, ['Expected at Week ' + weeksSinceStart + ':']),
                 el('div', { class: 'note' }, ['• Strength: ' + expected.strength]),
-                el('div', { class: 'note' }, ['• Muscle: ' + expected.visible]),
+                el('div', { class: 'note' }, ['• Weight Loss: ' + expected.weight]),
+                el('div', { class: 'note' }, ['• Visible Changes: ' + expected.visible]),
                 el('div', { class: 'note' }, ['• ' + expected.note])
             ]),
             el('div', { class: 'hr' }, []),
@@ -151,6 +208,8 @@ export function renderGoals(App) {
                 el('div', { class: 'note' }, ['• Deloads occur every 8 weeks automatically'])
             ]),
             el('div', { class: 'hr' }, []),
+
+
             
             // Goals
             el('div', { class: 'kv' }, [
@@ -187,8 +246,26 @@ export function renderGoals(App) {
                     'Current: ' + pushUpNames[currentPushUpLevel] + 
                     ' (' + (pushUpProg.consecutiveSuccesses || 0) + '/2 success workouts)'
                 ]),
+                // Show current rep target and progression path
+                (function() {
+                    const consecutiveSuccesses = pushUpProg.consecutiveSuccesses || 0;
+                    const repProgression = {
+                        wall: { baseReps: 15, increments: [0, 3, 5, 8, 10], maxReps: 25, maxTotal: 50 },
+                        knee: { baseReps: 8, increments: [0, 2, 4, 6, 8], maxReps: 16, maxTotal: 32 },
+                        full: { baseReps: 5, increments: [0, 2, 3, 5, 7], maxReps: 12, maxTotal: 24 }
+                    };
+                    const currentProg = repProgression[currentPushUpLevel] || repProgression.wall;
+                    const incrementIndex = Math.min(consecutiveSuccesses, currentProg.increments.length - 1);
+                    const currentTarget = currentProg.baseReps + currentProg.increments[incrementIndex];
+                    
+                    return el('div', { class: 'note' }, [
+                        'Current target: 2×' + currentTarget + ' reps (' + (currentTarget * 2) + ' total)'
+                    ]);
+                })(),
                 nextPushUpLevel ? 
-                    el('div', { class: 'note' }, ['Next: ' + pushUpNames[nextPushUpLevel] + ' (hit 2×20 for 2 consecutive workouts)']) :
+                    el('div', { class: 'note' }, [
+                        'Next level: ' + pushUpNames[nextPushUpLevel] + ' (after hitting max reps for 3 consecutive workouts)'
+                    ]) :
                     el('div', { class: 'note' }, ['🎉 Max level achieved!'])
             ]),
             

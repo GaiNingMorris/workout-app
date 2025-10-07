@@ -1,4 +1,4 @@
-import { el, addDays, dayName, planMonday, planTuesday, planThursday, planFriday, planRecovery, planRest, getSettings, weeksUntilDeload } from '../utils/helpers.js';
+import { el, addDays, dayName, planForWorkoutType, getSettings, weeksUntilDeload, getWorkoutSubtitle } from '../utils/helpers.js';
 
 export function renderSchedule(App) {
     var self = App;
@@ -6,7 +6,7 @@ export function renderSchedule(App) {
     
     (async function() {
         const settings = await getSettings();
-        const weeksLeft = weeksUntilDeload(settings.programStartDate);
+        const weeksLeft = await weeksUntilDeload(settings.programStartDate);
         const isCurrentlyDeload = weeksLeft === 0;
         
         var subtitle = 'Your 4-day muscle-building split';
@@ -35,13 +35,7 @@ export function renderSchedule(App) {
         }
 
         async function planFor(mode) {
-            if (mode === 'monday') return await planMonday();
-            if (mode === 'tuesday') return await planTuesday();
-            if (mode === 'thursday') return await planThursday();
-            if (mode === 'friday') return await planFriday();
-            if (mode === 'recovery') return await planRecovery();
-            if (mode === 'rest') return await planRest();
-            return { warmups: [], main: [] };
+            return await planForWorkoutType(mode);
         }
 
         var daysWrap = el('div', { class: 'list' }, []);
@@ -53,13 +47,8 @@ export function renderSchedule(App) {
                 var pm = plannedModeFor(d);
                 var label = dayName(d) + ' • ' + (d.getMonth() + 1) + '/' + d.getDate();
                 
-                var subtitle = '';
-                if (pm.mode === 'monday') subtitle = 'Upper Push - Chest, Shoulders, Triceps';
-                else if (pm.mode === 'tuesday') subtitle = 'Lower Quad - Squats & Glutes';
-                else if (pm.mode === 'thursday') subtitle = 'Upper Pull - Back & Biceps';
-                else if (pm.mode === 'friday') subtitle = 'Lower Posterior - Hamstrings & Glutes';
-                else if (pm.mode === 'recovery') subtitle = 'Recovery - Static Stretching Only';
-                else if (pm.mode === 'rest') subtitle = 'Full Rest Day';
+                var subtitle = getWorkoutSubtitle(pm.mode, pm.isDeload);
+                if (pm.mode === 'rest') subtitle = 'Full Rest Day';
 
                 var plan = await planFor(pm.mode);
                 var allExercises = (plan.warmups || []).concat(plan.main || []);

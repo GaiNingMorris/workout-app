@@ -1,0 +1,5 @@
+{"date":"2025-10-06","time":"2025-10-06T23:01:12.152Z","foodId":"pineapple-chicken","foodName":"Pineapple Chicken (1 serving)","quantity":1,"nutrition":{"calories":350,"protein":32,"carbs":25,"fat":15},"_id":"KJuZlWvEWUU6UGML"}
+{"date":"2025-10-06","time":"2025-10-06T16:01:00.000Z","foodId":"custom-meal-1759786771127","foodName":"rolled egg dish","quantity":1,"nutrition":{"calories":310,"protein":22,"carbs":1,"fat":24},"_id":"MY9mjItZlCvELfht"}
+{"date":"2025-10-06","time":"2025-10-06T23:05:10.665Z","foodId":"bonoza-pasta","foodName":"Bonoza Pasta (1 cup cooked)","quantity":2,"nutrition":{"calories":440,"protein":16,"carbs":88,"fat":2},"_id":"PXbHiEivX9hTEGYp"}
+{"date":"2025-10-06","time":"2025-10-06T23:56:21.977Z","foodId":"quick-protein-1759794981977","foodName":"High Protein Item (90g protein)","quantity":1,"nutrition":{"calories":200,"protein":90,"carbs":0,"fat":0},"_id":"T24fJQu8KdeIrXGe"}
+{"$$indexCreated":{"fieldName":"time","unique":false,"sparse":false}}

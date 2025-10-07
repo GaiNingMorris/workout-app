@@ -23,7 +23,7 @@ Muscle building workout app designed for age 50+ with 4-day split, progressive o
 - Knee injury (TRX assistance required for squats)
 - OMAD diet (One Meal A Day)
 - Equipment: Dumbbells with 0.5lb microplates, TRX, adjustable bench, power tower
-- Goal: Reduce from 262 lbs to 165 lbs while building muscle
+- Goal: Customizable user profile (see `src/config/userConfig.js`)
 
 ## 📅 Weekly Schedule
 
@@ -62,6 +62,34 @@ That's it! The app will:
 - Launch in a desktop window
 - Automatically migrate any old v1.x data to the new NeDB format
 - Create default user profile and settings if this is your first run
+
+## 👤 User Profile Setup
+
+**NEW in v2.0**: Smart user profile system with automatic target calculation!
+
+### First Time Setup:
+1. Go to **Settings** → **User Profile**
+2. Fill out your information:
+   - **Age**: Your current age (affects progress expectations)
+   - **Gender**: Male/Female (affects BMI calculations)  
+   - **Height**: In inches (for healthy weight calculations)
+   - **Current Weight**: Your starting weight in lbs
+   - **Fitness Goal**: 
+     - *Lose Weight & Build Muscle* (most common)
+     - *Maintain Weight & Build Muscle*
+     - *Gain Weight & Build Muscle*
+   - **Target Weight**: Auto-calculated, but you can override
+
+### Smart Features:
+- ✅ **Auto Target Calculation**: Based on healthy BMI for your height
+- ✅ **Personalized Progress**: Age and gender-adjusted expectations  
+- ✅ **Flexible Goals**: Choose lose/maintain/gain weight paths
+- ✅ **Multi-User Ready**: Just clear profile and set up for new person
+
+### For Different Users:
+1. **Settings** → **Factory Reset** (clears all data)
+2. Fill out new user's profile
+3. App automatically adapts to their needs!
 
 ## 📂 Project Structure
 
@@ -121,22 +149,54 @@ workout-app/
 
 ## 🖼️ Exercise Demo Images
 
-The app expects demo images in `src/assets/exercises/`. If you want custom photos, use these filenames (landscape ~1200×800 recommended):
+The app supports multiple image formats with automatic fallback priority in `src/assets/exercises/`:
 
-- `trx_squat.jpg`
-- `db_press.jpg`
-- `db_row.jpg`
-- `db_shoulder.jpg`
-- `db_curl.jpg`
-- `db_rdl.jpg`
-- `pushup.jpg`
-- `plank.jpg`
-- `bar_hang.jpg`
-- `chin_assist.jpg`
-- `hamstring_stretch.jpg`
-- `calf_stretch.jpg`
-- `hip_flexor_stretch.jpg`
-- `stretch.jpg` (fallback for any stretch/warm-up)
+### 📐 **Image Specifications**
+- **Dimensions**: 400×300px (4:3 aspect ratio)
+- **Quality**: 85% JPEG compression
+- **File Size**: <50KB each for optimal loading
+
+### 🎬 **Format Priority (Automatic Detection)**
+1. **WebP Animation** (`.webp`) - *Preferred*
+   - Best quality with smallest file size
+   - 2-3 second loops showing exercise motion
+   - Modern browsers support
+   
+2. **GIF Animation** (`.gif`) - *Fallback*
+   - Universal browser support
+   - 2-3 second loops showing exercise motion
+   - Larger file sizes than WebP
+   
+3. **JPEG Static** (`.jpg`) - *Final Fallback*
+   - Single frame demonstration
+   - Smallest file size
+   - Universal support
+
+### 📂 **Required Image Files**
+- `ankle_circles.jpg` - Ankle mobility warm-up
+- `arm_circles.jpg` - Shoulder mobility warm-up  
+- `bar_hang.jpg` - Dead hang exercise
+- `calf_stretch.jpg` - Wall calf stretch
+- `chest_stretch.jpg` - Doorway chest stretch
+- `chin_assist.jpg` - Assisted chin-up
+- `db_curl.jpg` - Dumbbell bicep curl
+- `db_press.jpg` - Bench-supported dumbbell press
+- `db_rdl.jpg` - Dumbbell Romanian deadlift
+- `db_row.jpg` - Seated dumbbell row
+- `db_shoulder.jpg` - Seated dumbbell shoulder press
+- `face_pulls.jpg` - Cable/band face pulls
+- `glute_bridge.jpg` - Glute bridge exercise
+- `plank.jpg` - Plank hold position
+- `pushup.jpg` - Push-up exercise (all variations)
+- `shoulder_stretch.jpg` - Cross-body shoulder stretch
+- `step_up.jpg` - Platform step-up
+- `trx_squat.jpg` - TRX-assisted squat
+- `wall_slides.jpg` - Wall slide warm-up
+
+### 🔄 **Adding Custom Images**
+1. **For Static Images**: Replace existing `.jpg` files
+2. **For Animated Images**: Add `.webp` or `.gif` versions alongside existing `.jpg` files
+3. **Auto-Resizing**: Run `node image-processor.js` to standardize dimensions
 
 ## 🔄 Migrating from v1.x
 

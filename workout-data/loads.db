@@ -1,2 +1,4 @@
-{"exerciseId":"Glute Bridge","currentWeight":16.5,"lastIncreaseDate":"2025-09-30T16:35:37.020Z","failStreak":0,"consecutiveSuccesses":1,"history":[],"_id":"LBkbhzE6fqZlKhaj"}
-{"exerciseId":"DB RDL (Hip Hinge)","currentWeight":16.5,"lastIncreaseDate":"2025-09-30T16:35:37.017Z","failStreak":0,"consecutiveSuccesses":1,"history":[],"_id":"MQIIWc4RplMowJKH"}
+{"exerciseId":"Seated Dumbbell Shoulder Press","currentWeight":5,"lastIncreaseDate":"2025-10-06T19:15:28.318Z","failStreak":0,"consecutiveSuccesses":1,"history":[],"_id":"3YjipkfYnZFESgdM"}
+{"exerciseId":"Bench-Supported Dumbbell Press","currentWeight":10,"lastIncreaseDate":"2025-10-06T19:15:28.316Z","failStreak":0,"consecutiveSuccesses":1,"history":[],"_id":"RbpI7WCgPilPrDHb"}
+{"exerciseId":"Seated Dumbbell Row","currentWeight":10,"lastIncreaseDate":"2025-10-06T19:15:28.319Z","failStreak":0,"consecutiveSuccesses":1,"history":[],"_id":"cIM6wbNdJlnEpPrY"}
+{"$$indexCreated":{"fieldName":"exerciseId","unique":false,"sparse":false}}

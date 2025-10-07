@@ -1,4 +1,5 @@
-import { el, getSettings, resetData } from '../utils/helpers.js';
+import { el, getSettings } from '../utils/helpers.js';
+import { USER_CONFIG, getUserProfileDescription, performFactoryReset, migrateToConfigDefaults } from '../config/userConfig.js';
 
 export function renderSettings(App) {
     var self = App;
@@ -6,6 +7,13 @@ export function renderSettings(App) {
     
     (async function() {
         const settings = await getSettings();
+        
+        // Auto-migrate old hardcoded values to config defaults
+        try {
+            await migrateToConfigDefaults();
+        } catch (e) {
+            console.log('Migration check failed:', e);
+        }
         
         var restGood = el('input', { 
             class: 'input', 
@@ -76,24 +84,7 @@ export function renderSettings(App) {
             alert('Settings saved!');
         });
 
-        var reset = el('button', { class: 'btn danger' }, ['Factory Reset']);
-        reset.addEventListener('click', async function() { 
-            if (!confirm('Are you sure you want to delete ALL workout data? This cannot be undone!')) {
-                return;
-            }
-            
-            if (!confirm('Really delete everything? Your workout history, progress, and settings will be lost forever!')) {
-                return;
-            }
-            
-            const result = await resetData();
-            if (result.ok) {
-                alert('All data has been reset. The app will reload.');
-                location.reload();
-            } else {
-                alert('Error resetting data: ' + (result.error || 'Unknown error'));
-            }
-        });
+        // Old factory reset removed - using new config-aware version below
         
         var exportBtn = el('button', { class: 'btn' }, ['Export Data (JSON)']);
         exportBtn.addEventListener('click', async function() {
@@ -162,19 +153,245 @@ export function renderSettings(App) {
             el('div', { class: 'row', style: 'margin-top: 10px' }, [saveBtn])
         ]);
 
+        // User Profile & Factory Reset
+        var profileResetBtn = el('button', { 
+            class: 'btn', 
+            style: 'background: #FF6B6B; color: white;' 
+        }, ['🏭 Factory Reset']);
+        
+        profileResetBtn.addEventListener('click', async function() {
+            var confirmed = confirm(
+                `FACTORY RESET WARNING!\n\n` +
+                `This will permanently delete ALL your data and reset to:\n` +
+                `• Starting weight: ${USER_CONFIG.startingWeight} lbs\n` +
+                `• Target weight: ${USER_CONFIG.targetWeight} lbs\n` +
+                `• Age: ${USER_CONFIG.age}\n` +
+                `• All workout logs will be deleted\n` +
+                `• All progress will be lost\n\n` +
+                `This CANNOT be undone! Are you sure?`
+            );
+            
+            if (confirmed) {
+                try {
+                    var result = await performFactoryReset();
+                    if (result.success) {
+                        alert('Factory reset complete! App will reload with fresh data.');
+                        await self.refreshData();
+                        self.render();
+                    } else {
+                        alert('Factory reset failed: ' + result.error);
+                    }
+                } catch (error) {
+                    alert('Factory reset error: ' + error.message);
+                }
+            }
+        });
+
+        // Get current user to show actual values
+        var currentUser = await window.db.findOne('user', { _id: 'user_profile' });
+        
+        // User Profile Form Fields
+        var ageInput = el('input', {
+            class: 'input',
+            type: 'number',
+            placeholder: 'Age (years)',
+            value: String(currentUser ? currentUser.age || '' : '')
+        }, []);
+
+        var genderSelect = el('select', { class: 'input' }, [
+            el('option', { value: 'male', selected: currentUser && currentUser.gender === 'male' }, ['Male']),
+            el('option', { value: 'female', selected: currentUser && currentUser.gender === 'female' }, ['Female'])
+        ]);
+
+        var heightInput = el('input', {
+            class: 'input',
+            type: 'number',
+            placeholder: 'Height (inches)',
+            value: String(currentUser ? currentUser.height || '' : '')
+        }, []);
+
+        var currentWeightInput = el('input', {
+            class: 'input',
+            type: 'number',
+            step: '0.1',
+            placeholder: 'Current weight (lbs)',
+            value: String(currentUser ? currentUser.currentWeight || '' : '')
+        }, []);
+
+        var goalSelect = el('select', { class: 'input' }, [
+            el('option', { value: 'lose_weight', selected: currentUser && currentUser.fitnessGoal === 'lose_weight' }, ['Lose Weight & Build Muscle']),
+            el('option', { value: 'maintain_build', selected: currentUser && currentUser.fitnessGoal === 'maintain_build' }, ['Maintain Weight & Build Muscle']),
+            el('option', { value: 'bulk', selected: currentUser && currentUser.fitnessGoal === 'bulk' }, ['Gain Weight & Build Muscle'])
+        ]);
+
+        // Calculate recommended target weight based on height and goals
+        function calculateTargetWeight(heightInches, currentWeight, goal, gender) {
+            if (!heightInches || !currentWeight) return currentWeight;
+            
+            // BMI-based healthy weight range calculation
+            var heightMeters = heightInches * 0.0254;
+            var healthyBMIMin = gender === 'female' ? 18.5 : 20;
+            var healthyBMIMax = gender === 'female' ? 24.9 : 25;
+            
+            var healthyWeightMin = healthyBMIMin * heightMeters * heightMeters * 2.205; // Convert to lbs
+            var healthyWeightMax = healthyBMIMax * heightMeters * heightMeters * 2.205;
+            
+            if (goal === 'lose_weight') {
+                // Target middle of healthy range, or 80% of current if already in range
+                return currentWeight > healthyWeightMax ? 
+                    Math.round((healthyWeightMin + healthyWeightMax) / 2) :
+                    Math.round(currentWeight * 0.85);
+            } else if (goal === 'maintain_build') {
+                return currentWeight;
+            } else { // bulk
+                // Target upper healthy range
+                return Math.round(healthyWeightMax);
+            }
+        }
+
+        var targetWeightInput = el('input', {
+            class: 'input',
+            type: 'number',
+            step: '0.1',
+            placeholder: 'Target weight (lbs)',
+            value: String(currentUser ? currentUser.targetWeight || '' : '')
+        }, []);
+
+        // Auto-calculate target weight when other fields change
+        function updateTargetWeight() {
+            var height = parseFloat(heightInput.value);
+            var weight = parseFloat(currentWeightInput.value);
+            var goal = goalSelect.value;
+            var gender = genderSelect.value;
+            
+            if (height && weight) {
+                var recommended = calculateTargetWeight(height, weight, goal, gender);
+                targetWeightInput.value = String(recommended);
+            }
+        }
+
+        heightInput.addEventListener('input', updateTargetWeight);
+        currentWeightInput.addEventListener('input', updateTargetWeight);
+        goalSelect.addEventListener('change', updateTargetWeight);
+        genderSelect.addEventListener('change', updateTargetWeight);
+
+        var saveProfileBtn = el('button', { class: 'btn' }, ['Save Profile']);
+        saveProfileBtn.addEventListener('click', async function() {
+            var age = parseInt(ageInput.value);
+            var gender = genderSelect.value;
+            var height = parseFloat(heightInput.value);
+            var currentWeight = parseFloat(currentWeightInput.value);
+            var targetWeight = parseFloat(targetWeightInput.value);
+            var fitnessGoal = goalSelect.value;
+            
+            // Validation
+            if (!age || age < 13 || age > 100) {
+                alert('Please enter a valid age (13-100)');
+                return;
+            }
+            if (!height || height < 48 || height > 84) {
+                alert('Please enter a valid height (48-84 inches)');
+                return;
+            }
+            if (!currentWeight || currentWeight < 80 || currentWeight > 500) {
+                alert('Please enter a valid current weight (80-500 lbs)');
+                return;
+            }
+            if (!targetWeight || targetWeight < 80 || targetWeight > 500) {
+                alert('Please enter a valid target weight (80-500 lbs)');
+                return;
+            }
+            
+            try {
+                var user = await window.db.findOne('user', { _id: 'user_profile' });
+                var profileData = {
+                    age: age,
+                    gender: gender,
+                    height: height,
+                    currentWeight: currentWeight,
+                    targetWeight: targetWeight,
+                    fitnessGoal: fitnessGoal,
+                    bodyweightHistory: user && user.bodyweightHistory ? user.bodyweightHistory : [{ 
+                        date: new Date().toISOString().split('T')[0], 
+                        weight: currentWeight 
+                    }]
+                };
+                
+                if (user) {
+                    // Update existing user
+                    await window.db.update(
+                        'user',
+                        { _id: 'user_profile' },
+                        { $set: profileData }
+                    );
+                } else {
+                    // Create new user
+                    profileData._id = 'user_profile';
+                    profileData.startDate = new Date().toISOString();
+                    profileData.bestHangTime = 0;
+                    profileData.unlocksAchieved = [];
+                    await window.db.insert('user', profileData);
+                }
+                
+                alert('Profile saved successfully!');
+                await self.refreshData();
+                self.render();
+            } catch (error) {
+                alert('Error saving profile: ' + error.message);
+            }
+        });
+
+        // Check if profile is complete
+        var isProfileComplete = currentUser && currentUser.age && currentUser.gender && 
+                               currentUser.height && currentUser.currentWeight && currentUser.targetWeight;
+
         var right = el('div', { class: 'card' }, [
+            el('h3', {}, ['👤 User Profile']),
+            isProfileComplete ? 
+                el('div', { class: 'note', style: 'color: #7CFFB2;' }, ['✅ Profile complete! Update any field below.']) :
+                el('div', { class: 'note', style: 'color: #FFD93D;' }, ['⚠️ Please complete your profile for personalized recommendations.']),
+            el('div', { class: 'kv' }, [
+                el('label', {}, ['Age']),
+                ageInput
+            ]),
+            el('div', { class: 'kv' }, [
+                el('label', {}, ['Gender']),
+                genderSelect
+            ]),
+            el('div', { class: 'kv' }, [
+                el('label', {}, ['Height (inches)']),
+                heightInput
+            ]),
+            el('div', { class: 'kv' }, [
+                el('label', {}, ['Current Weight (lbs)']),
+                currentWeightInput
+            ]),
+            el('div', { class: 'kv' }, [
+                el('label', {}, ['Fitness Goal']),
+                goalSelect
+            ]),
+            el('div', { class: 'kv' }, [
+                el('label', {}, ['Target Weight (lbs)']),
+                targetWeightInput
+            ]),
+            el('div', { class: 'note' }, [
+                '💡 Target weight auto-calculates based on your height and goal. You can override it.'
+            ]),
+            el('div', { class: 'row' }, [saveProfileBtn]),
+            el('div', { class: 'hr' }, []),
+            
             el('h3', {}, ['Data Management']),
             el('div', { class: 'note' }, [
                 'Data is stored locally in NeDB. Muscle building requires consistency - track your progress!'
             ]),
-            el('div', { class: 'hr' }, []),
             el('div', { class: 'row' }, [exportBtn]),
             el('div', { class: 'hr' }, []),
-            el('h3', {}, ['Danger Zone']),
+            
+            el('h3', {}, ['🚨 Danger Zone']),
             el('div', { class: 'note' }, [
-                '⚠️ Factory reset will delete ALL workout data permanently. This cannot be undone!'
+                '⚠️ Factory reset will delete ALL workout data and reset to config defaults!'
             ]),
-            el('div', { class: 'row' }, [reset])
+            el('div', { class: 'row' }, [profileResetBtn])
         ]);
 
         root.appendChild(el('div', { class: 'brand' }, [

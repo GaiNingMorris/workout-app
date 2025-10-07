@@ -26,14 +26,32 @@ function initDatabases() {
     loads: new Datastore({ filename: path.join(dbPath, 'loads.db'), autoload: true }),
     progressions: new Datastore({ filename: path.join(dbPath, 'progressions.db'), autoload: true }),
     user: new Datastore({ filename: path.join(dbPath, 'user.db'), autoload: true }),
-    settings: new Datastore({ filename: path.join(dbPath, 'settings.db'), autoload: true })
+    settings: new Datastore({ filename: path.join(dbPath, 'settings.db'), autoload: true }),
+    nutrition: new Datastore({ filename: path.join(dbPath, 'nutrition.db'), autoload: true })
   };
+
+  // Performance: Add database indexes for faster queries
+  setTimeout(() => {
+    // Index workouts by date for faster date-based queries
+    databases.workouts.ensureIndex({ fieldName: 'date' });
+    
+    // Index nutrition entries by time for faster daily nutrition queries
+    databases.nutrition.ensureIndex({ fieldName: 'time' });
+    
+    // Index loads by exerciseId for faster exercise lookup
+    databases.loads.ensureIndex({ fieldName: 'exerciseId' });
+    
+    // Index progressions by exerciseId for faster progression lookup
+    databases.progressions.ensureIndex({ fieldName: 'exerciseId' });
+    
+    console.log('Database indexes created for performance');
+  }, 100);
 
   console.log('NeDB databases initialized');
 }
 
 function createWindow() {
-  // Create the browser window
+  // Create the browser window with performance optimizations
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -41,16 +59,18 @@ function createWindow() {
     minHeight: 700,
     backgroundColor: '#0b1220',
     icon: getAppIcon(),
-    show: false, // Don't show until ready
+    show: false, // Don't show until ready - prevents flash
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
     webPreferences: {
       nodeIntegration: false, // Security: Disable node integration
       contextIsolation: true, // Security: Enable context isolation
       enableRemoteModule: false, // Security: Disable remote module
+      backgroundThrottling: false, // Performance: Prevent throttling when window is in background
+      offscreen: false, // Performance: Use GPU acceleration
       preload: path.join(__dirname, 'src', 'preload.js'),
       // Security: Restrict what the renderer can access
       allowRunningInsecureContent: false,
-      experimentalFeatures: false
+      experimentalFeatures: true // Performance: Enable experimental web features
     }
   });
 
@@ -246,7 +266,7 @@ ipcMain.handle('migrate-from-json', async () => {
         _id: 'user_profile',
         startDate: oldData.logs && oldData.logs[0] ? oldData.logs[0].date : new Date().toISOString(),
         currentWeight: oldData.weights && oldData.weights.length > 0 ? 
-          oldData.weights[oldData.weights.length - 1].weight : 262,
+          oldData.weights[oldData.weights.length - 1].weight : 262.4, // TODO: Use USER_CONFIG when available
         targetWeight: oldData.goals?.targetWeight || 165,
         height: 71,
         age: 52,
